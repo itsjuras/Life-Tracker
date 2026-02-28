@@ -1,0 +1,16 @@
+{
+  "expo": {
+    "name": "Life Tracker",
+    "slug": "life-tracker",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "ios": {
+      "supportsTablet": false
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#ffffff"
+      }
+    }
+  }
+}

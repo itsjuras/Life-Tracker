@@ -1,0 +1,9 @@
+{
+  "name": "life-tracker",
+  "private": true,
+  "workspaces": ["apps/*", "services/*", "packages/*"],
+  "scripts": {
+    "api": "npm run dev --workspace=services/api",
+    "mobile": "npm run start --workspace=apps/mobile"
+  }
+}
