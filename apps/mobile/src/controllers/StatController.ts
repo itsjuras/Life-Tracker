@@ -1,8 +1,39 @@
+import { supabase } from '../services/supabase';
 import { StatDefinition, StatEntry } from '../models/Stat';
-import * as api from '../services/api';
+
+function mapStatDef(row: any): StatDefinition {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    key: row.key,
+    label: row.label,
+    unit: row.unit,
+    enabled: row.enabled,
+  };
+}
+
+function mapStatEntry(row: any): StatEntry {
+  return {
+    id: row.id,
+    statDefinitionId: row.stat_definition_id,
+    date: row.date,
+    value: row.value,
+  };
+}
+
+async function getUserId(): Promise<string> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error('Not authenticated');
+  return session.user.id;
+}
 
 export async function fetchStatDefinitions(): Promise<StatDefinition[]> {
-  return api.get<StatDefinition[]>('/v1/stats');
+  const { data, error } = await supabase
+    .from('stat_definitions')
+    .select('*')
+    .order('label', { ascending: true });
+  if (error) throw error;
+  return (data ?? []).map(mapStatDef);
 }
 
 export async function createStatDefinition(
@@ -10,7 +41,14 @@ export async function createStatDefinition(
   label: string,
   unit: string,
 ): Promise<StatDefinition> {
-  return api.post<StatDefinition>('/v1/stats', { key, label, unit });
+  const userId = await getUserId();
+  const { data, error } = await supabase
+    .from('stat_definitions')
+    .insert({ user_id: userId, key, label, unit })
+    .select()
+    .single();
+  if (error) throw error;
+  return mapStatDef(data);
 }
 
 export async function logStatEntry(
@@ -18,7 +56,16 @@ export async function logStatEntry(
   date: string,
   value: number,
 ): Promise<StatEntry> {
-  return api.post<StatEntry>(`/v1/stats/${statId}/entries`, { date, value });
+  const { data, error } = await supabase
+    .from('stat_entries')
+    .upsert(
+      { stat_definition_id: statId, date, value },
+      { onConflict: 'stat_definition_id,date' },
+    )
+    .select()
+    .single();
+  if (error) throw error;
+  return mapStatEntry(data);
 }
 
 export async function fetchStatEntries(
@@ -26,5 +73,32 @@ export async function fetchStatEntries(
   from: string,
   to: string,
 ): Promise<StatEntry[]> {
-  return api.get<StatEntry[]>(`/v1/stats/${statId}/entries?from=${from}&to=${to}`);
+  const { data, error } = await supabase
+    .from('stat_entries')
+    .select('*')
+    .eq('stat_definition_id', statId)
+    .gte('date', from)
+    .lte('date', to)
+    .order('date', { ascending: true });
+  if (error) throw error;
+  return (data ?? []).map(mapStatEntry);
+}
+
+export async function deleteStatDefinition(statId: string): Promise<void> {
+  const { error } = await supabase
+    .from('stat_definitions')
+    .delete()
+    .eq('id', statId);
+  if (error) throw error;
+}
+
+export async function toggleStatEnabled(statId: string, enabled: boolean): Promise<StatDefinition> {
+  const { data, error } = await supabase
+    .from('stat_definitions')
+    .update({ enabled })
+    .eq('id', statId)
+    .select()
+    .single();
+  if (error) throw error;
+  return mapStatDef(data);
 }

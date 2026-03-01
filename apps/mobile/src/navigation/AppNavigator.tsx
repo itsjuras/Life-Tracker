@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -9,13 +9,20 @@ import HomeScreen from '../views/screens/HomeScreen';
 import ProgressScreen from '../views/screens/ProgressScreen';
 import LoginScreen from '../views/screens/LoginScreen';
 import SettingsScreen from '../views/screens/SettingsScreen';
+import TrackingManagerScreen from '../views/screens/TrackingManagerScreen';
 import Avatar from '../views/components/Avatar';
 
 const Tab = createBottomTabNavigator();
 
+type SettingsPage = 'settings' | 'tracking';
+
 function SettingsTab() {
   const { session } = useAuth();
-  return session ? <SettingsScreen /> : <LoginScreen />;
+  const [page, setPage] = useState<SettingsPage>('settings');
+
+  if (!session) return <LoginScreen />;
+  if (page === 'tracking') return <TrackingManagerScreen onBack={() => setPage('settings')} />;
+  return <SettingsScreen onEditTracking={() => setPage('tracking')} />;
 }
 
 export default function AppNavigator() {

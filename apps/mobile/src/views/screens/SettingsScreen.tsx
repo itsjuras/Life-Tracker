@@ -28,7 +28,11 @@ function SectionHeader({ label }: { label: string }) {
 
 const divider = 'border-b border-gray-100 dark:border-gray-800';
 
-export default function SettingsScreen() {
+interface Props {
+  onEditTracking: () => void;
+}
+
+export default function SettingsScreen({ onEditTracking }: Props) {
   const { session, profile, refreshProfile } = useAuth();
   const { isDark, toggleTheme } = useTheme();
 
@@ -272,6 +276,18 @@ export default function SettingsScreen() {
               </View>
             </View>
           )}
+        </View>
+
+        {/* Tracking */}
+        <SectionHeader label="Tracking" />
+        <View className={`border-t ${divider}`}>
+          <TouchableOpacity
+            className="px-5 py-4 flex-row items-center justify-between"
+            onPress={onEditTracking}
+          >
+            <Text className="text-base text-gray-900 dark:text-white">Edit Daily Tracking</Text>
+            <Ionicons name="chevron-forward" size={16} color="#9ca3af" />
+          </TouchableOpacity>
         </View>
 
         {/* Sign out */}
