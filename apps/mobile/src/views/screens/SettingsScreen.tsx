@@ -127,8 +127,18 @@ export default function SettingsScreen({ onEditTracking }: Props) {
     setConfirmPassword('');
   }
 
+  const label = () => ({
+    fontSize: 11, fontWeight: '600' as const,
+    color: isDark ? '#f9fafb' : '#111827',
+    textTransform: 'uppercase' as const, letterSpacing: 1.5,
+  });
+  const muted = {
+    fontSize: 11, color: '#9ca3af',
+    textTransform: 'uppercase' as const, letterSpacing: 1.5,
+  };
+
   return (
-    <SafeAreaView className="flex-1 bg-white dark:bg-gray-950">
+    <SafeAreaView className="flex-1 bg-white" style={isDark ? { backgroundColor: '#000000' } : undefined}>
       <ScrollView showsVerticalScrollIndicator={false}>
 
         {/* Profile header */}
@@ -136,8 +146,7 @@ export default function SettingsScreen({ onEditTracking }: Props) {
           <TouchableOpacity onPress={handleAvatarPress} disabled={uploadingAvatar} className="mb-2">
             {uploadingAvatar ? (
               <View
-                className="bg-gray-100 dark:bg-gray-800 items-center justify-center"
-                style={{ width: 120, height: 120, borderRadius: 60 }}
+                style={{ width: 120, height: 120, borderRadius: 60, backgroundColor: isDark ? '#1f2937' : '#f3f4f6', alignItems: 'center', justifyContent: 'center' }}
               >
                 <ActivityIndicator color="#9ca3af" />
               </View>
@@ -145,7 +154,7 @@ export default function SettingsScreen({ onEditTracking }: Props) {
               <Avatar url={profile?.avatar_url} size={120} />
             )}
           </TouchableOpacity>
-          <Text className="text-xs text-gray-400 dark:text-gray-500">tap to change photo</Text>
+          <Text style={{ fontSize: 9, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.8 }}>tap to change photo</Text>
         </View>
 
         {/* Account */}
@@ -164,16 +173,16 @@ export default function SettingsScreen({ onEditTracking }: Props) {
                   onSubmitEditing={handleUsernameSave}
                   autoCapitalize="none"
                   autoCorrect={false}
-                  className="text-base text-gray-900 dark:text-white"
+                  style={{ fontSize: 11, color: isDark ? '#f9fafb' : '#111827' }}
                 />
                 <View className="flex-row" style={{ gap: 20 }}>
                   <TouchableOpacity onPress={() => { setEditingUsername(false); setUsernameInput(profile?.username ?? ''); }}>
-                    <Text className="text-gray-400 dark:text-gray-500 text-sm">Cancel</Text>
+                    <Text style={muted}>Cancel</Text>
                   </TouchableOpacity>
                   <TouchableOpacity onPress={handleUsernameSave} disabled={savingUsername}>
                     {savingUsername
                       ? <ActivityIndicator size="small" color="#9ca3af" />
-                      : <Text className="text-gray-900 dark:text-white font-medium text-sm">Save</Text>
+                      : <Text style={label()}>Save</Text>
                     }
                   </TouchableOpacity>
                 </View>
@@ -183,9 +192,9 @@ export default function SettingsScreen({ onEditTracking }: Props) {
                 className="flex-row items-center justify-between"
                 onPress={() => setEditingUsername(true)}
               >
-                <Text className="text-sm text-gray-500 dark:text-gray-400">Username</Text>
+                <Text style={muted}>Username</Text>
                 <View className="flex-row items-center" style={{ gap: 8 }}>
-                  <Text className="text-base text-gray-900 dark:text-white">
+                  <Text style={label()}>
                     {profile?.username ?? '—'}
                   </Text>
                   <Ionicons name="pencil-outline" size={14} color="#9ca3af" />
@@ -196,8 +205,8 @@ export default function SettingsScreen({ onEditTracking }: Props) {
 
           {/* Email (read-only) */}
           <View className="px-5 py-4 flex-row items-center justify-between">
-            <Text className="text-sm text-gray-500 dark:text-gray-400">Email</Text>
-            <Text className="text-base text-gray-400 dark:text-gray-500">
+            <Text style={muted}>Email</Text>
+            <Text style={muted}>
               {session?.user.email ?? '—'}
             </Text>
           </View>
@@ -208,7 +217,7 @@ export default function SettingsScreen({ onEditTracking }: Props) {
         <SectionHeader label="Appearance" />
         <View className={`border-t ${divider}`}>
           <View className="px-5 py-4 flex-row items-center justify-between">
-            <Text className="text-base text-gray-900 dark:text-white">Dark Mode</Text>
+            <Text style={label()}>Dark Mode</Text>
             <Switch
               value={isDark}
               onValueChange={toggleTheme}
@@ -226,14 +235,13 @@ export default function SettingsScreen({ onEditTracking }: Props) {
               className="px-5 py-4 flex-row items-center justify-between"
               onPress={() => setChangingPassword(true)}
             >
-              <Text className="text-base text-gray-900 dark:text-white">Change Password</Text>
+              <Text style={label()}>Change Password</Text>
               <Ionicons name="chevron-forward" size={16} color="#9ca3af" />
             </TouchableOpacity>
           ) : (
             <View className="px-5 py-4" style={{ gap: 12 }}>
               <View
-                className="flex-row items-center bg-gray-100 dark:bg-gray-800 rounded-xl px-4"
-                style={{ paddingVertical: 12 }}
+                style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? '#1f2937' : '#f3f4f6', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12 }}
               >
                 <TextInput
                   value={newPassword}
@@ -241,15 +249,14 @@ export default function SettingsScreen({ onEditTracking }: Props) {
                   placeholder="New password"
                   placeholderTextColor="#9ca3af"
                   secureTextEntry={!showNewPw}
-                  className="flex-1 text-gray-900 dark:text-white text-base"
+                  style={{ flex: 1, fontSize: 11, color: isDark ? '#f9fafb' : '#111827' }}
                 />
                 <TouchableOpacity onPress={() => setShowNewPw(v => !v)} hitSlop={8}>
                   <Ionicons name={showNewPw ? 'eye-off-outline' : 'eye-outline'} size={20} color="#9ca3af" />
                 </TouchableOpacity>
               </View>
               <View
-                className="flex-row items-center bg-gray-100 dark:bg-gray-800 rounded-xl px-4"
-                style={{ paddingVertical: 12 }}
+                style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? '#1f2937' : '#f3f4f6', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12 }}
               >
                 <TextInput
                   value={confirmPassword}
@@ -257,7 +264,7 @@ export default function SettingsScreen({ onEditTracking }: Props) {
                   placeholder="Confirm new password"
                   placeholderTextColor="#9ca3af"
                   secureTextEntry={!showConfirmPw}
-                  className="flex-1 text-gray-900 dark:text-white text-base"
+                  style={{ flex: 1, fontSize: 11, color: isDark ? '#f9fafb' : '#111827' }}
                 />
                 <TouchableOpacity onPress={() => setShowConfirmPw(v => !v)} hitSlop={8}>
                   <Ionicons name={showConfirmPw ? 'eye-off-outline' : 'eye-outline'} size={20} color="#9ca3af" />
@@ -265,12 +272,12 @@ export default function SettingsScreen({ onEditTracking }: Props) {
               </View>
               <View className="flex-row justify-end" style={{ gap: 20 }}>
                 <TouchableOpacity onPress={cancelPasswordEdit}>
-                  <Text className="text-gray-400 dark:text-gray-500 text-sm">Cancel</Text>
+                  <Text style={muted}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={handlePasswordSave} disabled={savingPassword}>
                   {savingPassword
                     ? <ActivityIndicator size="small" color="#9ca3af" />
-                    : <Text className="text-gray-900 dark:text-white font-medium text-sm">Save</Text>
+                    : <Text style={label()}>Save</Text>
                   }
                 </TouchableOpacity>
               </View>
@@ -285,21 +292,21 @@ export default function SettingsScreen({ onEditTracking }: Props) {
             className="px-5 py-4 flex-row items-center justify-between"
             onPress={onEditTracking}
           >
-            <Text className="text-base text-gray-900 dark:text-white">Edit Daily Tracking</Text>
+            <Text style={label()}>Edit Daily Tracking</Text>
             <Ionicons name="chevron-forward" size={16} color="#9ca3af" />
           </TouchableOpacity>
         </View>
 
         {/* Sign out */}
-        <View className="px-5 pt-8 pb-10">
-          <TouchableOpacity
-            onPress={() => signOut()}
-            className="border border-gray-200 dark:border-gray-700 rounded-xl items-center"
-            style={{ paddingVertical: 14 }}
-          >
-            <Text className="text-gray-500 dark:text-gray-400 text-sm font-medium">Sign Out</Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          onPress={() => signOut()}
+          activeOpacity={0.6}
+          style={{ alignSelf: 'center', marginTop: 28, marginBottom: 40 }}
+        >
+          <Text style={{ fontSize: 11, fontWeight: '600', letterSpacing: 3, textTransform: 'uppercase', color: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.25)' }}>
+            Sign Out
+          </Text>
+        </TouchableOpacity>
 
       </ScrollView>
     </SafeAreaView>
