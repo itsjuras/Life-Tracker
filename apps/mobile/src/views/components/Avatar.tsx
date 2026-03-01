@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useColorScheme } from 'nativewind';
 
 interface AvatarProps {
   url?: string | null;
@@ -8,6 +9,7 @@ interface AvatarProps {
 }
 
 export default function Avatar({ url, size = 40 }: AvatarProps) {
+  const { colorScheme } = useColorScheme();
   const radius = size / 2;
 
   if (url) {
@@ -25,12 +27,12 @@ export default function Avatar({ url, size = 40 }: AvatarProps) {
         width: size,
         height: size,
         borderRadius: radius,
-        backgroundColor: '#e5e7eb',
+        backgroundColor: colorScheme === 'dark' ? '#374151' : '#e5e7eb',
         alignItems: 'center',
         justifyContent: 'center',
       }}
     >
-      <Ionicons name="person" size={size * 0.48} color="#9ca3af" />
+      <Ionicons name="person" size={size * 0.48} color={colorScheme === 'dark' ? '#6b7280' : '#9ca3af'} />
     </View>
   );
 }

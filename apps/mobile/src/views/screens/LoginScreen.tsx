@@ -79,7 +79,7 @@ export default function LoginScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView className="flex-1 bg-white dark:bg-gray-950">
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         className="flex-1"
@@ -93,10 +93,10 @@ export default function LoginScreen() {
 
             {/* Header */}
             <View className="mb-12">
-              <Text className="text-3xl font-semibold tracking-tight text-gray-900">
+              <Text className="text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">
                 Life Tracker
               </Text>
-              <Text className="text-sm text-gray-400 mt-1">
+              <Text className="text-sm text-gray-400 dark:text-gray-500 mt-1">
                 Track your daily life, simply.
               </Text>
             </View>
@@ -111,20 +111,20 @@ export default function LoginScreen() {
                 >
                   <Text
                     className={`text-sm font-medium ${
-                      mode === m ? 'text-gray-900' : 'text-gray-400'
+                      mode === m ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-600'
                     }`}
                   >
                     {m === 'signin' ? 'Sign In' : 'Create Account'}
                   </Text>
                   {mode === m && (
-                    <View className="h-px bg-gray-900 mt-1" />
+                    <View className="h-px bg-gray-900 dark:bg-white mt-1" />
                   )}
                 </TouchableOpacity>
               ))}
             </View>
 
             {/* Inputs */}
-            <View className="mb-5" style={{ gap: 12 }}>
+            <View className="border-t border-gray-100 dark:border-gray-800 mb-8">
               {mode === 'signin' ? (
                 <TextInput
                   value={identifier}
@@ -133,8 +133,8 @@ export default function LoginScreen() {
                   placeholderTextColor="#9ca3af"
                   autoCapitalize="none"
                   autoCorrect={false}
-                  className="bg-gray-50 border border-gray-200 rounded-xl px-4 text-gray-900 text-base"
-                  style={{ paddingVertical: 14 }}
+                  className="text-gray-900 dark:text-white text-base border-b border-gray-100 dark:border-gray-800"
+                  style={{ paddingVertical: 16 }}
                 />
               ) : (
                 <>
@@ -146,8 +146,8 @@ export default function LoginScreen() {
                     autoCapitalize="none"
                     keyboardType="email-address"
                     autoCorrect={false}
-                    className="bg-gray-50 border border-gray-200 rounded-xl px-4 text-gray-900 text-base"
-                    style={{ paddingVertical: 14 }}
+                    className="text-gray-900 dark:text-white text-base border-b border-gray-100 dark:border-gray-800"
+                    style={{ paddingVertical: 16 }}
                   />
                   <TextInput
                     value={username}
@@ -156,33 +156,33 @@ export default function LoginScreen() {
                     placeholderTextColor="#9ca3af"
                     autoCapitalize="none"
                     autoCorrect={false}
-                    className="bg-gray-50 border border-gray-200 rounded-xl px-4 text-gray-900 text-base"
-                    style={{ paddingVertical: 14 }}
+                    className="text-gray-900 dark:text-white text-base border-b border-gray-100 dark:border-gray-800"
+                    style={{ paddingVertical: 16 }}
                   />
                 </>
               )}
-              <View className="flex-row items-center bg-gray-50 border border-gray-200 rounded-xl px-4" style={{ paddingVertical: 14 }}>
+              <View className="flex-row items-center border-b border-gray-100 dark:border-gray-800" style={{ paddingVertical: 16 }}>
                 <TextInput
                   value={password}
                   onChangeText={setPassword}
                   placeholder="Password"
                   placeholderTextColor="#9ca3af"
                   secureTextEntry={!showPassword}
-                  className="flex-1 text-gray-900 text-base"
+                  className="flex-1 text-gray-900 dark:text-white text-base"
                 />
                 <TouchableOpacity onPress={() => setShowPassword(v => !v)} hitSlop={8}>
                   <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color="#9ca3af" />
                 </TouchableOpacity>
               </View>
               {mode === 'signup' && (
-                <View className="flex-row items-center bg-gray-50 border border-gray-200 rounded-xl px-4" style={{ paddingVertical: 14 }}>
+                <View className="flex-row items-center border-b border-gray-100 dark:border-gray-800" style={{ paddingVertical: 16 }}>
                   <TextInput
                     value={confirm}
                     onChangeText={setConfirm}
                     placeholder="Confirm Password"
                     placeholderTextColor="#9ca3af"
                     secureTextEntry={!showConfirm}
-                    className="flex-1 text-gray-900 text-base"
+                    className="flex-1 text-gray-900 dark:text-white text-base"
                   />
                   <TouchableOpacity onPress={() => setShowConfirm(v => !v)} hitSlop={8}>
                     <Ionicons name={showConfirm ? 'eye-off-outline' : 'eye-outline'} size={20} color="#9ca3af" />
@@ -193,10 +193,10 @@ export default function LoginScreen() {
 
             {/* Feedback */}
             {error && (
-              <Text className="text-red-500 text-sm mb-4">{error}</Text>
+              <Text className="text-red-500 text-sm mb-5">{error}</Text>
             )}
             {info && (
-              <Text className="text-gray-500 text-sm mb-4">{info}</Text>
+              <Text className="text-gray-500 text-sm mb-5">{info}</Text>
             )}
 
             {/* Submit */}

@@ -3,23 +3,25 @@ import { View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
+import { useColorScheme } from 'nativewind';
 import { useAuth } from '../context/AuthContext';
 import HomeScreen from '../views/screens/HomeScreen';
 import ProgressScreen from '../views/screens/ProgressScreen';
 import LoginScreen from '../views/screens/LoginScreen';
-import ProfileScreen from '../views/screens/ProfileScreen';
+import SettingsScreen from '../views/screens/SettingsScreen';
 import Avatar from '../views/components/Avatar';
 
 const Tab = createBottomTabNavigator();
 
-// Renders login or profile depending on auth state
-function ProfileTab() {
+function SettingsTab() {
   const { session } = useAuth();
-  return session ? <ProfileScreen /> : <LoginScreen />;
+  return session ? <SettingsScreen /> : <LoginScreen />;
 }
 
 export default function AppNavigator() {
   const { profile } = useAuth();
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
 
   return (
     <NavigationContainer>
@@ -29,14 +31,14 @@ export default function AppNavigator() {
           headerShown: false,
           tabBarShowLabel: false,
           tabBarStyle: {
-            backgroundColor: '#ffffff',
+            backgroundColor: isDark ? '#111111' : '#ffffff',
             borderTopWidth: 1,
-            borderTopColor: '#f3f4f6',
+            borderTopColor: isDark ? '#1f2937' : '#f3f4f6',
             height: 60,
             paddingBottom: 8,
           },
-          tabBarActiveTintColor: '#111111',
-          tabBarInactiveTintColor: '#9ca3af',
+          tabBarActiveTintColor: isDark ? '#ffffff' : '#111111',
+          tabBarInactiveTintColor: isDark ? '#6b7280' : '#9ca3af',
         }}
       >
         <Tab.Screen
@@ -58,8 +60,8 @@ export default function AppNavigator() {
           }}
         />
         <Tab.Screen
-          name="Profile"
-          component={ProfileTab}
+          name="Settings"
+          component={SettingsTab}
           options={{
             tabBarIcon: ({ focused, size }) => (
               <View
@@ -68,7 +70,7 @@ export default function AppNavigator() {
                     ? {
                         borderRadius: size / 2 + 3,
                         borderWidth: 2,
-                        borderColor: '#111111',
+                        borderColor: isDark ? '#ffffff' : '#111111',
                         padding: 1,
                       }
                     : undefined

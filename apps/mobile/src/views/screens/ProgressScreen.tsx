@@ -4,9 +4,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ProgressScreen() {
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView className="flex-1 bg-white dark:bg-gray-950">
       <View className="flex-1 items-center justify-center">
-        <Text className="text-gray-300 text-base">Progress</Text>
+        <Text className="text-gray-300 dark:text-gray-700 text-base">Progress</Text>
       </View>
     </SafeAreaView>
   );
