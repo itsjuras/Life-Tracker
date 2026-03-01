@@ -57,28 +57,26 @@ function ModalSheet({
         style={{ flex: 1 }}
       >
         <Pressable
-          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center' }}
           onPress={onClose}
         >
           <Pressable
             style={{
-              backgroundColor: isDark ? '#1f2937' : '#ffffff',
-              borderTopLeftRadius: 22,
-              borderTopRightRadius: 22,
-              paddingHorizontal: 20,
-              paddingTop: 12,
-              paddingBottom: 36,
+              width: 320,
+              backgroundColor: isDark ? '#111111' : '#ffffff',
+              borderRadius: 24,
+              paddingHorizontal: 24,
+              paddingTop: 24,
+              paddingBottom: 28,
             }}
             onPress={() => {}}
           >
-            <View style={{
-              width: 36, height: 4, borderRadius: 2,
-              backgroundColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)',
-              alignSelf: 'center', marginBottom: 18,
-            }} />
             <Text style={{
-              fontSize: 17, fontWeight: '600',
+              fontSize: 11, fontWeight: '600',
               color: isDark ? '#f9fafb' : '#111827',
+              textTransform: 'uppercase',
+              letterSpacing: 1.5,
+              textAlign: 'center',
               marginBottom: 20,
             }}>
               {title}
@@ -97,7 +95,7 @@ function FieldLabel({ text }: { text: string }) {
       fontSize: 11, fontWeight: '600',
       color: '#9ca3af',
       textTransform: 'uppercase',
-      letterSpacing: 1,
+      letterSpacing: 1.5,
       marginBottom: 8,
     }}>
       {text}
@@ -200,7 +198,7 @@ function CreateHabitModal({
       />
       <FieldLabel text="Icon" />
       <ScrollView style={{ maxHeight: 168 }} showsVerticalScrollIndicator={false}>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingBottom: 4 }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingBottom: 4, justifyContent: 'center' }}>
           {ICON_KEYS.map(key => {
             const isSelected = key === selectedIcon;
             return (
