@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, useWindowDimensions } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, useWindowDimensions, PanResponder } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { VictoryArea, VictoryChart, VictoryAxis } from 'victory-native';
@@ -12,6 +12,7 @@ import { StatDefinition, StatEntry } from '../../models/Stat';
 
 // ── Constants ─────────────────────────────────────────────────────────────
 const CELL_GAP = 3;
+const CALENDAR_PADDING = 16;
 const DAY_HEADERS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -119,7 +120,7 @@ function MonthCalendar({
                   style={{
                     width: cellSize,
                     height: cellSize,
-                    backgroundColor: (!date || isFuture)
+                    backgroundColor: !date
                       ? 'transparent'
                       : habitColor(ratio, isDark),
                     borderRadius: 4,
@@ -156,7 +157,7 @@ export default function ProgressScreen() {
   const [statEntriesMap, setStatEntriesMap] = useState<Record<string, StatEntry[]>>({});
 
   // Floor to an integer so every cell is identically sized with no sub-pixel rounding
-  const cellSize = Math.floor((screenWidth - CELL_GAP * 6) / 7);
+  const cellSize = Math.floor((screenWidth - CELL_GAP * 6 - CALENDAR_PADDING * 2) / 7);
   const chartWidth = screenWidth - 40;
   const calFrom = calendarRangeStart(today);
   const statFrom = (() => {
@@ -166,6 +167,25 @@ export default function ProgressScreen() {
   })();
 
   const displayMonth = getDisplayMonth(today, monthOffset);
+
+  // Max forward offset = months remaining in the current calendar year
+  const maxMonthOffset = 11 - new Date(today + 'T00:00:00').getMonth();
+  const maxMonthOffsetRef = useRef(maxMonthOffset);
+  maxMonthOffsetRef.current = maxMonthOffset;
+
+  const calendarPanResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gs) =>
+        Math.abs(gs.dx) > 10 && Math.abs(gs.dx) > Math.abs(gs.dy),
+      onPanResponderRelease: (_, gs) => {
+        if (gs.dx > 50) {
+          setMonthOffset(o => o - 1);
+        } else if (gs.dx < -50) {
+          setMonthOffset(o => Math.min(o + 1, maxMonthOffsetRef.current));
+        }
+      },
+    })
+  ).current;
 
   useEffect(() => { loadAll(); }, [today]);
 
@@ -230,7 +250,7 @@ export default function ProgressScreen() {
             No habits set up yet.
           </Text>
         ) : (
-          <>
+          <View {...calendarPanResponder.panHandlers}>
             {/* Month navigation */}
             <View className="flex-row items-center justify-between px-5 mb-3">
               <TouchableOpacity onPress={() => setMonthOffset(o => o - 1)} hitSlop={8}>
@@ -243,28 +263,30 @@ export default function ProgressScreen() {
 
               <TouchableOpacity
                 onPress={() => setMonthOffset(o => o + 1)}
-                disabled={monthOffset >= 0}
+                disabled={monthOffset >= maxMonthOffset}
                 hitSlop={8}
               >
                 <Ionicons
                   name="chevron-forward"
                   size={20}
-                  color={monthOffset >= 0 ? mutedColor : iconColor}
+                  color={monthOffset >= maxMonthOffset ? mutedColor : iconColor}
                 />
               </TouchableOpacity>
             </View>
 
-            {/* Calendar grid — no horizontal padding so cells fill full width */}
-            <MonthCalendar
-              year={displayMonth.year}
-              month={displayMonth.month}
-              today={today}
-              ratioByDate={ratioByDate}
-              isDark={isDark}
-              mutedColor={mutedColor}
-              cellSize={cellSize}
-            />
-          </>
+            {/* Calendar grid with side padding */}
+            <View style={{ paddingHorizontal: CALENDAR_PADDING }}>
+              <MonthCalendar
+                year={displayMonth.year}
+                month={displayMonth.month}
+                today={today}
+                ratioByDate={ratioByDate}
+                isDark={isDark}
+                mutedColor={mutedColor}
+                cellSize={cellSize}
+              />
+            </View>
+          </View>
         )}
 
         {/* ── STAT CHARTS ── */}
