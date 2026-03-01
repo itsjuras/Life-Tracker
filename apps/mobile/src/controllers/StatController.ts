@@ -68,6 +68,15 @@ export async function logStatEntry(
   return mapStatEntry(data);
 }
 
+export async function fetchAllStatEntriesForDate(date: string): Promise<StatEntry[]> {
+  const { data, error } = await supabase
+    .from('stat_entries')
+    .select('*')
+    .eq('date', date);
+  if (error) throw error;
+  return (data ?? []).map(mapStatEntry);
+}
+
 export async function fetchStatEntries(
   statId: string,
   from: string,

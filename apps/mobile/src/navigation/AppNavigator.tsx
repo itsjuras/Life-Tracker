@@ -14,7 +14,14 @@ import Avatar from '../views/components/Avatar';
 
 const Tab = createBottomTabNavigator();
 
+type HomePage = 'home' | 'tracking';
 type SettingsPage = 'settings' | 'tracking';
+
+function HomeTab() {
+  const [page, setPage] = useState<HomePage>('home');
+  if (page === 'tracking') return <TrackingManagerScreen onBack={() => setPage('home')} />;
+  return <HomeScreen onEdit={() => setPage('tracking')} />;
+}
 
 function SettingsTab() {
   const { session } = useAuth();
@@ -59,7 +66,7 @@ export default function AppNavigator() {
         />
         <Tab.Screen
           name="Home"
-          component={HomeScreen}
+          component={HomeTab}
           options={{
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="home-outline" size={size} color={color} />
