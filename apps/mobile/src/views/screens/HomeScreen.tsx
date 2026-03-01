@@ -1,230 +1,654 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  ScrollView,
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
+  View, Text, TextInput, TouchableOpacity, ScrollView,
+  ActivityIndicator, KeyboardAvoidingView, Platform,
+  Animated, LayoutAnimation, useWindowDimensions, Keyboard,
+  Modal, Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useColorScheme } from 'nativewind';
 import { useToday } from '../../hooks/useToday';
-import { fetchHabits, fetchEntriesForDate, toggleHabitEntry } from '../../controllers/HabitController';
-import { fetchTasksForDate, toggleTask } from '../../controllers/TaskController';
-import { fetchStatDefinitions, logStatEntry, fetchAllStatEntriesForDate } from '../../controllers/StatController';
-import { fetchReflection, saveReflection } from '../../controllers/ReflectionController';
-import { Habit, HabitEntry } from '../../models/Habit';
+import { fetchHabits, fetchEntriesForDate, toggleHabitEntry, createHabit } from '../../controllers/HabitController';
+import { fetchTasksForDate, createTask, toggleTask } from '../../controllers/TaskController';
+import { fetchStatDefinitions, logStatEntry, fetchAllStatEntriesForDate, createStatDefinition } from '../../controllers/StatController';
+import { Habit } from '../../models/Habit';
 import { Task } from '../../models/Task';
 import { StatDefinition } from '../../models/Stat';
-import { ICON_MAP } from '../../constants/icons';
+import { ICON_MAP, ICON_KEYS, IconKey } from '../../constants/icons';
 
-type Step = 'loading' | 'tasks' | 'habits' | 'stats' | 'reflection' | 'done';
-
-const STEP_ORDER: Step[] = ['tasks', 'habits', 'stats', 'reflection', 'done'];
-
-const STEP_LABEL: Partial<Record<Step, string>> = {
-  tasks: 'Tasks',
-  habits: 'Habits',
-  stats: 'Stats',
-  reflection: 'Reflection',
-};
-
-const divider = 'border-b border-gray-100 dark:border-gray-800';
-
-function countWords(text: string): number {
-  return text.trim() === '' ? 0 : text.trim().split(/\s+/).length;
+// ── Glass card base style ─────────────────────────────────────────────────────
+function glassCard(isDark: boolean) {
+  return {
+    backgroundColor: isDark ? 'rgba(255,255,255,0.07)' : '#f9fafb',
+    borderWidth: 1,
+    borderColor: isDark ? 'rgba(255,255,255,0.11)' : 'rgba(209,213,219,0.7)',
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: isDark ? 0.22 : 0.06,
+    shadowRadius: 6,
+    elevation: 2,
+  };
 }
 
-function formatDate(dateStr: string): string {
-  const date = new Date(dateStr + 'T00:00:00');
-  return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+// ── Section header ────────────────────────────────────────────────────────────
+function SectionHeader({ label }: { label: string }) {
+  return (
+    <Text className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest px-5 pt-6 pb-3">
+      {label}
+    </Text>
+  );
 }
 
-interface Props {
-  onEdit: () => void;
+// ── Shared modal sheet wrapper ────────────────────────────────────────────────
+function ModalSheet({
+  visible, isDark, onClose, title, children,
+}: {
+  visible: boolean; isDark: boolean; onClose: () => void;
+  title: string; children: React.ReactNode;
+}) {
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+      >
+        <Pressable
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}
+          onPress={onClose}
+        >
+          <Pressable
+            style={{
+              backgroundColor: isDark ? '#1f2937' : '#ffffff',
+              borderTopLeftRadius: 22,
+              borderTopRightRadius: 22,
+              paddingHorizontal: 20,
+              paddingTop: 12,
+              paddingBottom: 36,
+            }}
+            onPress={() => {}}
+          >
+            <View style={{
+              width: 36, height: 4, borderRadius: 2,
+              backgroundColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)',
+              alignSelf: 'center', marginBottom: 18,
+            }} />
+            <Text style={{
+              fontSize: 17, fontWeight: '600',
+              color: isDark ? '#f9fafb' : '#111827',
+              marginBottom: 20,
+            }}>
+              {title}
+            </Text>
+            {children}
+          </Pressable>
+        </Pressable>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
 }
+
+function FieldLabel({ text }: { text: string }) {
+  return (
+    <Text style={{
+      fontSize: 11, fontWeight: '600',
+      color: '#9ca3af',
+      textTransform: 'uppercase',
+      letterSpacing: 1,
+      marginBottom: 8,
+    }}>
+      {text}
+    </Text>
+  );
+}
+
+function ModalButtons({
+  isDark, onCancel, onConfirm, confirmLabel, confirmEnabled, saving,
+}: {
+  isDark: boolean; onCancel: () => void; onConfirm: () => void;
+  confirmLabel: string; confirmEnabled: boolean; saving: boolean;
+}) {
+  return (
+    <View style={{ flexDirection: 'row', gap: 12, marginTop: 20 }}>
+      <TouchableOpacity
+        onPress={onCancel}
+        style={{
+          flex: 1, paddingVertical: 14, borderRadius: 12,
+          alignItems: 'center',
+          backgroundColor: isDark ? 'rgba(255,255,255,0.07)' : '#f3f4f6',
+        }}
+      >
+        <Text style={{ fontSize: 15, fontWeight: '500', color: isDark ? 'rgba(255,255,255,0.55)' : '#6b7280' }}>
+          Cancel
+        </Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={onConfirm}
+        disabled={!confirmEnabled || saving}
+        style={{
+          flex: 1, paddingVertical: 14, borderRadius: 12,
+          alignItems: 'center',
+          backgroundColor: confirmEnabled ? '#22c55e' : (isDark ? 'rgba(255,255,255,0.07)' : '#f3f4f6'),
+          opacity: saving ? 0.6 : 1,
+        }}
+      >
+        <Text style={{
+          fontSize: 15, fontWeight: '600',
+          color: confirmEnabled ? '#fff' : (isDark ? 'rgba(255,255,255,0.25)' : '#9ca3af'),
+        }}>
+          {saving ? 'Creating…' : confirmLabel}
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+// ── CreateHabitModal ──────────────────────────────────────────────────────────
+function CreateHabitModal({
+  isDark, visible, onClose, onCreate,
+}: {
+  isDark: boolean; visible: boolean;
+  onClose: () => void; onCreate: (h: Habit) => void;
+}) {
+  const [name, setName] = useState('');
+  const [selectedIcon, setSelectedIcon] = useState<IconKey>('heart');
+  const [saving, setSaving] = useState(false);
+
+  const handleClose = () => {
+    setName(''); setSelectedIcon('heart'); setSaving(false);
+    Keyboard.dismiss();
+    onClose();
+  };
+
+  const handleCreate = async () => {
+    const trimmed = name.trim();
+    if (!trimmed || saving) return;
+    setSaving(true);
+    try {
+      const habit = await createHabit(trimmed, selectedIcon);
+      onCreate(habit);
+      setName(''); setSelectedIcon('heart');
+      onClose();
+    } catch { /* silent */ } finally { setSaving(false); }
+  };
+
+  return (
+    <ModalSheet visible={visible} isDark={isDark} onClose={handleClose} title="New Habit">
+      <FieldLabel text="Name" />
+      <TextInput
+        value={name}
+        onChangeText={setName}
+        onSubmitEditing={handleCreate}
+        placeholder="e.g. Morning run"
+        placeholderTextColor={isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.22)'}
+        autoFocus
+        returnKeyType="done"
+        blurOnSubmit={false}
+        style={{
+          ...glassCard(isDark),
+          paddingVertical: 12,
+          paddingHorizontal: 14,
+          fontSize: 15,
+          color: isDark ? '#f9fafb' : '#111827',
+          marginBottom: 20,
+        }}
+      />
+      <FieldLabel text="Icon" />
+      <ScrollView style={{ maxHeight: 168 }} showsVerticalScrollIndicator={false}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingBottom: 4 }}>
+          {ICON_KEYS.map(key => {
+            const isSelected = key === selectedIcon;
+            return (
+              <TouchableOpacity
+                key={key}
+                onPress={() => setSelectedIcon(key)}
+                style={{
+                  width: 42, height: 42, borderRadius: 10,
+                  alignItems: 'center', justifyContent: 'center',
+                  backgroundColor: isSelected
+                    ? 'rgba(34,197,94,0.18)'
+                    : (isDark ? 'rgba(255,255,255,0.07)' : '#f3f4f6'),
+                  borderWidth: 1.5,
+                  borderColor: isSelected ? 'rgba(34,197,94,0.5)' : 'transparent',
+                }}
+              >
+                <Ionicons
+                  name={ICON_MAP[key]}
+                  size={20}
+                  color={isSelected ? '#22c55e' : (isDark ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.4)')}
+                />
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </ScrollView>
+      <ModalButtons
+        isDark={isDark}
+        onCancel={handleClose}
+        onConfirm={handleCreate}
+        confirmLabel="Create"
+        confirmEnabled={!!name.trim()}
+        saving={saving}
+      />
+    </ModalSheet>
+  );
+}
+
+// ── CreateTaskModal ───────────────────────────────────────────────────────────
+function CreateTaskModal({
+  isDark, visible, today, sortOrder, onClose, onCreate,
+}: {
+  isDark: boolean; visible: boolean; today: string; sortOrder: number;
+  onClose: () => void; onCreate: (t: Task) => void;
+}) {
+  const [title, setTitle] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const handleClose = () => {
+    setTitle(''); setSaving(false);
+    Keyboard.dismiss();
+    onClose();
+  };
+
+  const handleCreate = async () => {
+    const trimmed = title.trim();
+    if (!trimmed || saving) return;
+    setSaving(true);
+    try {
+      const task = await createTask(today, trimmed, sortOrder);
+      onCreate(task);
+      setTitle('');
+      onClose();
+    } catch { /* silent */ } finally { setSaving(false); }
+  };
+
+  return (
+    <ModalSheet visible={visible} isDark={isDark} onClose={handleClose} title="New Task">
+      <FieldLabel text="Title" />
+      <TextInput
+        value={title}
+        onChangeText={setTitle}
+        onSubmitEditing={handleCreate}
+        placeholder="What needs to get done?"
+        placeholderTextColor={isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.22)'}
+        autoFocus
+        returnKeyType="done"
+        blurOnSubmit={false}
+        style={{
+          ...glassCard(isDark),
+          paddingVertical: 12,
+          paddingHorizontal: 14,
+          fontSize: 15,
+          color: isDark ? '#f9fafb' : '#111827',
+        }}
+      />
+      <ModalButtons
+        isDark={isDark}
+        onCancel={handleClose}
+        onConfirm={handleCreate}
+        confirmLabel="Create"
+        confirmEnabled={!!title.trim()}
+        saving={saving}
+      />
+    </ModalSheet>
+  );
+}
+
+// ── CreateStatModal ───────────────────────────────────────────────────────────
+function CreateStatModal({
+  isDark, visible, onClose, onCreate,
+}: {
+  isDark: boolean; visible: boolean;
+  onClose: () => void; onCreate: (s: StatDefinition) => void;
+}) {
+  const [label, setLabel] = useState('');
+  const [unit, setUnit] = useState('');
+  const [saving, setSaving] = useState(false);
+  const unitRef = useRef<TextInput>(null);
+
+  const handleClose = () => {
+    setLabel(''); setUnit(''); setSaving(false);
+    Keyboard.dismiss();
+    onClose();
+  };
+
+  const handleCreate = async () => {
+    const trimmedLabel = label.trim();
+    if (!trimmedLabel || saving) return;
+    const key = trimmedLabel.toLowerCase().replace(/[^a-z0-9]+/g, '_');
+    setSaving(true);
+    try {
+      const stat = await createStatDefinition(key, trimmedLabel, unit.trim());
+      onCreate(stat);
+      setLabel(''); setUnit('');
+      onClose();
+    } catch { /* silent */ } finally { setSaving(false); }
+  };
+
+  return (
+    <ModalSheet visible={visible} isDark={isDark} onClose={handleClose} title="New Stat">
+      <FieldLabel text="Label" />
+      <TextInput
+        value={label}
+        onChangeText={setLabel}
+        onSubmitEditing={() => unitRef.current?.focus()}
+        placeholder="e.g. Weight"
+        placeholderTextColor={isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.22)'}
+        autoFocus
+        returnKeyType="next"
+        blurOnSubmit={false}
+        style={{
+          ...glassCard(isDark),
+          paddingVertical: 12,
+          paddingHorizontal: 14,
+          fontSize: 15,
+          color: isDark ? '#f9fafb' : '#111827',
+          marginBottom: 16,
+        }}
+      />
+      <FieldLabel text="Unit (optional)" />
+      <TextInput
+        ref={unitRef}
+        value={unit}
+        onChangeText={setUnit}
+        onSubmitEditing={handleCreate}
+        placeholder="e.g. kg, min, hours"
+        placeholderTextColor={isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.22)'}
+        returnKeyType="done"
+        blurOnSubmit={false}
+        style={{
+          ...glassCard(isDark),
+          paddingVertical: 12,
+          paddingHorizontal: 14,
+          fontSize: 15,
+          color: isDark ? '#f9fafb' : '#111827',
+        }}
+      />
+      <ModalButtons
+        isDark={isDark}
+        onCancel={handleClose}
+        onConfirm={handleCreate}
+        confirmLabel="Create"
+        confirmEnabled={!!label.trim()}
+        saving={saving}
+      />
+    </ModalSheet>
+  );
+}
+
+// ── HabitCell — glass icon that pops green then fades away on press ───────────
+function HabitCell({
+  habit, isDark, cellSize, onComplete,
+}: {
+  habit: Habit; isDark: boolean; cellSize: number; onComplete: (id: string) => void;
+}) {
+  const scale = useRef(new Animated.Value(1)).current;
+  const opacity = useRef(new Animated.Value(1)).current;
+  const [activated, setActivated] = useState(false);
+
+  const iconName = ICON_MAP[habit.iconKey as keyof typeof ICON_MAP] ?? 'ellipse-outline';
+
+  const handlePress = () => {
+    setActivated(true);
+    Animated.sequence([
+      Animated.timing(scale, { toValue: 1.2, duration: 100, useNativeDriver: true }),
+      Animated.parallel([
+        Animated.timing(scale, { toValue: 0, duration: 220, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0, duration: 220, useNativeDriver: true }),
+      ]),
+    ]).start(() => onComplete(habit.id));
+  };
+
+  return (
+    <Animated.View style={{ width: cellSize, alignItems: 'center', transform: [{ scale }], opacity }}>
+      <TouchableOpacity
+        onPress={handlePress}
+        activeOpacity={0.85}
+        style={{
+          width: cellSize,
+          height: cellSize,
+          borderRadius: 16,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: activated
+            ? 'rgba(34,197,94,0.18)'
+            : (isDark ? 'rgba(255,255,255,0.07)' : '#f9fafb'),
+          borderWidth: 1,
+          borderColor: activated
+            ? 'rgba(34,197,94,0.4)'
+            : (isDark ? 'rgba(255,255,255,0.11)' : 'rgba(209,213,219,0.7)'),
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: isDark ? 0.22 : 0.06,
+          shadowRadius: 6,
+          elevation: 2,
+        }}
+      >
+        <Ionicons
+          name={iconName}
+          size={Math.floor(cellSize * 0.38)}
+          color={activated
+            ? '#22c55e'
+            : (isDark ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.38)')}
+        />
+      </TouchableOpacity>
+      <Text
+        numberOfLines={1}
+        style={{
+          fontSize: 9,
+          marginTop: 5,
+          color: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.3)',
+          maxWidth: cellSize,
+          textAlign: 'center',
+        }}
+      >
+        {habit.name}
+      </Text>
+    </Animated.View>
+  );
+}
+
+// ── TaskCard — glass rectangle that pops and disappears on press ──────────────
+function TaskCard({
+  task, isDark, onComplete,
+}: {
+  task: Task; isDark: boolean; onComplete: (id: string) => void;
+}) {
+  const scale = useRef(new Animated.Value(1)).current;
+  const opacity = useRef(new Animated.Value(1)).current;
+
+  const handlePress = () => {
+    Animated.sequence([
+      Animated.timing(scale, { toValue: 1.04, duration: 90, useNativeDriver: true }),
+      Animated.parallel([
+        Animated.timing(scale, { toValue: 0.88, duration: 200, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0, duration: 200, useNativeDriver: true }),
+      ]),
+    ]).start(() => onComplete(task.id));
+  };
+
+  return (
+    <Animated.View style={{ transform: [{ scale }], opacity }}>
+      <TouchableOpacity
+        onPress={handlePress}
+        activeOpacity={0.85}
+        style={{
+          ...glassCard(isDark),
+          paddingVertical: 16,
+          paddingHorizontal: 18,
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 14,
+        }}
+      >
+        <View style={{
+          width: 18, height: 18, borderRadius: 9,
+          borderWidth: 1.5,
+          borderColor: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.2)',
+        }} />
+        <Text style={{ flex: 1, fontSize: 15, color: isDark ? '#f9fafb' : '#111827' }}>
+          {task.title}
+        </Text>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+}
+
+// ── StatCard — glass input card that pops and disappears on value submit ──────
+function StatCard({
+  stat, isDark, today, onSubmitted,
+}: {
+  stat: StatDefinition; isDark: boolean; today: string; onSubmitted: (id: string) => void;
+}) {
+  const scale = useRef(new Animated.Value(1)).current;
+  const opacity = useRef(new Animated.Value(1)).current;
+  const [value, setValue] = useState('');
+  const submittedRef = useRef(false);
+
+  const handleSubmit = () => {
+    if (submittedRef.current) return;
+    const val = parseFloat(value.trim());
+    if (isNaN(val)) return;
+    submittedRef.current = true;
+    logStatEntry(stat.id, today, val).catch(() => { /* silent */ });
+    Animated.sequence([
+      Animated.timing(scale, { toValue: 1.03, duration: 90, useNativeDriver: true }),
+      Animated.parallel([
+        Animated.timing(scale, { toValue: 0.88, duration: 200, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0, duration: 200, useNativeDriver: true }),
+      ]),
+    ]).start(() => onSubmitted(stat.id));
+  };
+
+  return (
+    <Animated.View style={{ transform: [{ scale }], opacity }}>
+      <View style={{
+        ...glassCard(isDark),
+        paddingVertical: 14,
+        paddingHorizontal: 18,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+      }}>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 15, color: isDark ? '#f9fafb' : '#111827' }}>{stat.label}</Text>
+          {stat.unit ? (
+            <Text style={{ fontSize: 11, color: '#9ca3af', marginTop: 1 }}>{stat.unit}</Text>
+          ) : null}
+        </View>
+        <TextInput
+          value={value}
+          onChangeText={setValue}
+          onSubmitEditing={handleSubmit}
+          placeholder="—"
+          placeholderTextColor="#9ca3af"
+          keyboardType="numeric"
+          returnKeyType="done"
+          style={{
+            fontSize: 15,
+            color: isDark ? '#f9fafb' : '#111827',
+            textAlign: 'right',
+            minWidth: 60,
+          }}
+        />
+      </View>
+    </Animated.View>
+  );
+}
+
+// ── HomeScreen ────────────────────────────────────────────────────────────────
+interface Props { onEdit: () => void; }
 
 export default function HomeScreen({ onEdit }: Props) {
   const today = useToday();
+  const { width: screenWidth } = useWindowDimensions();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
-  const iconColor = isDark ? '#ffffff' : '#111111';
   const mutedColor = '#9ca3af';
 
-  const [step, setStep] = useState<Step>('loading');
-  const [showCompleted, setShowCompleted] = useState(false);
-
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
   const [habits, setHabits] = useState<Habit[]>([]);
-  const [entries, setEntries] = useState<HabitEntry[]>([]);
+  const [completedHabitIds, setCompletedHabitIds] = useState<Set<string>>(new Set());
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [completedTaskIds, setCompletedTaskIds] = useState<Set<string>>(new Set());
   const [stats, setStats] = useState<StatDefinition[]>([]);
-  const [statInputs, setStatInputs] = useState<Record<string, string>>({});
-  const [reflection, setReflection] = useState('');
-  const [reflectionSaved, setReflectionSaved] = useState(false);
-  const [savingReflection, setSavingReflection] = useState(false);
+  const [submittedStatIds, setSubmittedStatIds] = useState<Set<string>>(new Set());
+  const [modalOpen, setModalOpen] = useState<'habit' | 'task' | 'stat' | null>(null);
 
-  useEffect(() => {
-    loadAll();
-  }, [today]);
+  const HABIT_GAP = 12;
+  const HABIT_PADDING = 20;
+  const HABIT_COLS = 4;
+  const cellSize = Math.floor(
+    (screenWidth - HABIT_PADDING * 2 - HABIT_GAP * (HABIT_COLS - 1)) / HABIT_COLS
+  );
+
+  useEffect(() => { loadAll(); }, [today]);
 
   async function loadAll() {
-    setStep('loading');
+    setLoading(true);
     try {
-      const [t, h, e, s, se, r] = await Promise.all([
-        fetchTasksForDate(today),
+      const [h, e, t, s, se] = await Promise.all([
         fetchHabits(),
         fetchEntriesForDate(today),
+        fetchTasksForDate(today),
         fetchStatDefinitions(),
         fetchAllStatEntriesForDate(today),
-        fetchReflection(today),
       ]);
-
-      const enabledStats = s.filter(st => st.enabled);
-      const inputMap: Record<string, string> = {};
-      for (const entry of se) {
-        inputMap[entry.statDefinitionId] = String(entry.value);
-      }
-
-      setTasks(t);
       setHabits(h);
-      setEntries(e);
-      setStats(enabledStats);
-      setStatInputs(inputMap);
-      setReflection(r?.text ?? '');
-      const saved = !!r;
-      setReflectionSaved(saved);
-
-      // Determine starting step from freshly fetched data
-      const allTasksDone = t.length === 0 || t.every(task => task.completed);
-      const allHabitsDone = h.length === 0 || h.every(habit =>
-        e.find(entry => entry.habitId === habit.id)?.completed
-      );
-      const allStatsDone = enabledStats.length === 0 || enabledStats.every(st => !!inputMap[st.id]?.trim());
-
-      if (!allTasksDone) setStep('tasks');
-      else if (!allHabitsDone) setStep('habits');
-      else if (!allStatsDone) setStep('stats');
-      else if (!saved) setStep('reflection');
-      else setStep('done');
-    } catch {
-      setStep('tasks');
-    }
-  }
-
-  // Returns true if the given step has nothing left to do
-  function isStepComplete(s: Step): boolean {
-    if (s === 'tasks') return tasks.length === 0 || tasks.every(t => t.completed);
-    if (s === 'habits') return habits.length === 0 || habits.every(h =>
-      entries.find(e => e.habitId === h.id)?.completed
-    );
-    if (s === 'stats') return stats.length === 0 || stats.every(st => !!statInputs[st.id]?.trim());
-    if (s === 'reflection') return reflectionSaved;
-    return true;
-  }
-
-  function goPrev() {
-    const idx = STEP_ORDER.indexOf(step);
-    if (idx > 0) setStep(STEP_ORDER[idx - 1]);
-  }
-
-  // Advance to the next incomplete step, skipping any that are already done
-  function goNext() {
-    const idx = STEP_ORDER.indexOf(step);
-    for (let i = idx + 1; i < STEP_ORDER.length; i++) {
-      const next = STEP_ORDER[i];
-      if (next === 'done' || !isStepComplete(next)) {
-        setStep(next);
-        return;
-      }
-    }
-    setStep('done');
-  }
-
-  // ── Actions ──────────────────────────────────────────────────────────────
-
-  async function handleToggleTask(task: Task) {
-    const nowCompleted = !task.completed;
-    // Optimistic update
-    setTasks(prev => prev.map(t => t.id === task.id ? { ...t, completed: nowCompleted } : t));
-    try {
-      const updated = await toggleTask(task.id, nowCompleted);
-      setTasks(prev => prev.map(t => t.id === updated.id ? updated : t));
-    } catch {
-      setTasks(prev => prev.map(t => t.id === task.id ? task : t)); // revert
-    }
-  }
-
-  async function handleToggleHabit(habit: Habit) {
-    const existing = entries.find(e => e.habitId === habit.id);
-    const nowCompleted = !(existing?.completed ?? false);
-    // Optimistic update
-    const optimistic: HabitEntry = { id: existing?.id ?? '', habitId: habit.id, date: today, completed: nowCompleted };
-    setEntries(prev => {
-      const idx = prev.findIndex(e => e.habitId === habit.id);
-      if (idx >= 0) return prev.map((e, i) => i === idx ? optimistic : e);
-      return [...prev, optimistic];
-    });
-    try {
-      const updated = await toggleHabitEntry(habit.id, today, nowCompleted);
-      setEntries(prev => prev.map(e => e.habitId === habit.id ? updated : e));
-    } catch {
-      setEntries(prev => {
-        if (existing) return prev.map(e => e.habitId === habit.id ? existing : e);
-        return prev.filter(e => e.habitId !== habit.id);
-      });
-    }
-  }
-
-  async function handleStatBlur(statId: string) {
-    const raw = statInputs[statId]?.trim();
-    if (!raw) return;
-    const val = parseFloat(raw);
-    if (isNaN(val)) return;
-    try { await logStatEntry(statId, today, val); } catch { /* silent */ }
-  }
-
-  async function handleStatsNext() {
-    // Flush any unsaved stat inputs before advancing
-    await Promise.all(
-      stats.map(stat => {
-        const raw = statInputs[stat.id]?.trim();
-        if (!raw) return Promise.resolve();
-        const val = parseFloat(raw);
-        if (isNaN(val)) return Promise.resolve();
-        return logStatEntry(stat.id, today, val).catch(() => { /* silent */ });
-      })
-    );
-    goNext();
-  }
-
-  async function handleSaveReflection() {
-    const trimmed = reflection.trim();
-    if (!trimmed || countWords(trimmed) > 10) return;
-    setSavingReflection(true);
-    try {
-      await saveReflection(today, trimmed);
-      setReflectionSaved(true);
-      goNext();
+      setCompletedHabitIds(new Set(e.filter(en => en.completed).map(en => en.habitId)));
+      setTasks(t);
+      setCompletedTaskIds(new Set(t.filter(tk => tk.completed).map(tk => tk.id)));
+      setStats(s.filter(st => st.enabled));
+      setSubmittedStatIds(new Set(se.map(en => en.statDefinitionId)));
     } catch { /* silent */ } finally {
-      setSavingReflection(false);
+      setLoading(false);
     }
   }
 
-  // ── Derived ──────────────────────────────────────────────────────────────
+  const pendingHabits = habits.filter(h => !completedHabitIds.has(h.id));
+  const pendingTasks = tasks.filter(t => !completedTaskIds.has(t.id));
+  const pendingStats = stats.filter(s => !submittedStatIds.has(s.id));
 
-  const activeTasks = tasks.filter(t => !t.completed);
-  const completedTasks = tasks.filter(t => t.completed);
-  const wordCount = countWords(reflection);
-  const wordCountOver = wordCount > 10;
-  const reflectionValid = !wordCountOver && reflection.trim() !== '';
+  async function handleHabitComplete(id: string) {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setCompletedHabitIds(prev => new Set([...prev, id]));
+    try { await toggleHabitEntry(id, today, true); } catch {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setCompletedHabitIds(prev => { const n = new Set(prev); n.delete(id); return n; });
+    }
+  }
 
-  // ── Render ───────────────────────────────────────────────────────────────
+  async function handleTaskComplete(id: string) {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setCompletedTaskIds(prev => new Set([...prev, id]));
+    try { await toggleTask(id, true); } catch {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setCompletedTaskIds(prev => { const n = new Set(prev); n.delete(id); return n; });
+    }
+  }
 
-  if (step === 'loading') {
+  function handleStatSubmitted(id: string) {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setSubmittedStatIds(prev => new Set([...prev, id]));
+  }
+
+  function handleHabitCreated(habit: Habit) {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setHabits(prev => [...prev, habit]);
+  }
+
+  function handleTaskCreated(task: Task) {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setTasks(prev => [...prev, task]);
+  }
+
+  function handleStatCreated(stat: StatDefinition) {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setStats(prev => [...prev, stat]);
+  }
+
+  if (loading) {
     return (
       <SafeAreaView className="flex-1 bg-white dark:bg-gray-950 items-center justify-center">
         <ActivityIndicator color={mutedColor} />
@@ -232,29 +656,21 @@ export default function HomeScreen({ onEdit }: Props) {
     );
   }
 
-  if (step === 'done') {
-    return (
-      <SafeAreaView className="flex-1 bg-white dark:bg-gray-950">
-        <View className={`px-5 py-4 flex-row items-center justify-between ${divider}`}>
-          <TouchableOpacity onPress={() => setStep('reflection')} hitSlop={8}>
-            <Text className="text-sm text-gray-400 dark:text-gray-500">Back</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={onEdit} hitSlop={8}>
-            <Ionicons name="create-outline" size={18} color={mutedColor} />
-          </TouchableOpacity>
-        </View>
-        <View className="flex-1 items-center justify-center px-8">
-          <Ionicons name="checkmark-circle-outline" size={40} color={mutedColor} />
-          <Text className="text-base text-gray-900 dark:text-white mt-5 text-center">
-            All done for today.
-          </Text>
-          <Text className="text-xs text-gray-400 dark:text-gray-500 mt-1 text-center">
-            {formatDate(today)}
-          </Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  // Shared dashed "+" button style for full-width cards
+  const plusCardStyle = {
+    ...glassCard(isDark),
+    paddingVertical: 16,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    borderStyle: 'dashed' as const,
+    borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.12)',
+  };
+
+  const plusTextStyle = {
+    fontSize: 22,
+    lineHeight: 24,
+    color: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.2)',
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-white dark:bg-gray-950">
@@ -262,208 +678,126 @@ export default function HomeScreen({ onEdit }: Props) {
         className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        {/* Step header */}
-        <View className={`px-5 py-4 flex-row items-center justify-between ${divider}`}>
-          <Text className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest">
-            {STEP_LABEL[step]}
-          </Text>
+        {/* Header */}
+        <View className="flex-row items-center justify-end px-5 py-3">
           <TouchableOpacity onPress={onEdit} hitSlop={8}>
             <Ionicons name="create-outline" size={18} color={mutedColor} />
           </TouchableOpacity>
         </View>
 
-        {/* Step content */}
         <ScrollView
           className="flex-1"
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ paddingBottom: 48 }}
         >
+          {/* ── HABITS ── */}
+          <View>
+            <SectionHeader label="Habits" />
+            <View style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              paddingHorizontal: HABIT_PADDING,
+              gap: HABIT_GAP,
+              paddingBottom: 4,
+            }}>
+              {pendingHabits.map(habit => (
+                <HabitCell
+                  key={habit.id}
+                  habit={habit}
+                  isDark={isDark}
+                  cellSize={cellSize}
+                  onComplete={handleHabitComplete}
+                />
+              ))}
+              {/* "+" habit cell — same square size as habit cells */}
+              <TouchableOpacity
+                onPress={() => setModalOpen('habit')}
+                activeOpacity={0.7}
+                style={{
+                  width: cellSize,
+                  height: cellSize,
+                  borderRadius: 16,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderWidth: 1,
+                  borderStyle: 'dashed',
+                  borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.12)',
+                }}
+              >
+                <Text style={{
+                  fontSize: Math.floor(cellSize * 0.35),
+                  lineHeight: Math.floor(cellSize * 0.38),
+                  color: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.2)',
+                }}>
+                  +
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
 
           {/* ── TASKS ── */}
-          {step === 'tasks' && (
-            <View className="border-t border-gray-100 dark:border-gray-800">
-              {tasks.length === 0 ? (
-                <View className={`px-5 py-4 ${divider}`}>
-                  <Text className="text-sm text-gray-400 dark:text-gray-500">No tasks for today.</Text>
-                </View>
-              ) : (
-                <>
-                  {activeTasks.map(task => (
-                    <TouchableOpacity
-                      key={task.id}
-                      onPress={() => handleToggleTask(task)}
-                      className={`px-5 py-4 flex-row items-center ${divider}`}
-                      style={{ gap: 14 }}
-                    >
-                      <View style={{
-                        width: 18, height: 18, borderRadius: 9,
-                        borderWidth: 1.5, borderColor: mutedColor,
-                      }} />
-                      <Text className="text-base text-gray-900 dark:text-white flex-1">
-                        {task.title}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-
-                  {completedTasks.length > 0 && (
-                    <TouchableOpacity
-                      onPress={() => setShowCompleted(v => !v)}
-                      className={`px-5 py-3 ${divider}`}
-                    >
-                      <Text className="text-xs text-gray-400 dark:text-gray-500">
-                        {showCompleted ? 'Hide completed' : `${completedTasks.length} completed`}
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-
-                  {showCompleted && completedTasks.map(task => (
-                    <TouchableOpacity
-                      key={task.id}
-                      onPress={() => handleToggleTask(task)}
-                      className={`px-5 py-4 flex-row items-center ${divider}`}
-                      style={{ gap: 14 }}
-                    >
-                      <Ionicons name="checkmark-circle" size={18} color={mutedColor} />
-                      <Text className="text-base text-gray-400 dark:text-gray-600 flex-1 line-through">
-                        {task.title}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </>
-              )}
+          <View>
+            <SectionHeader label="Tasks" />
+            <View style={{ paddingHorizontal: 16, gap: 10 }}>
+              {pendingTasks.map(task => (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  isDark={isDark}
+                  onComplete={handleTaskComplete}
+                />
+              ))}
+              {/* "+" task card — full-width rectangle */}
+              <TouchableOpacity onPress={() => setModalOpen('task')} activeOpacity={0.7} style={plusCardStyle}>
+                <Text style={plusTextStyle}>+</Text>
+              </TouchableOpacity>
             </View>
-          )}
-
-          {/* ── HABITS ── */}
-          {step === 'habits' && (
-            <View className="border-t border-gray-100 dark:border-gray-800">
-              {habits.length === 0 ? (
-                <View className={`px-5 py-4 ${divider}`}>
-                  <Text className="text-sm text-gray-400 dark:text-gray-500">No habits yet.</Text>
-                </View>
-              ) : habits.map(habit => {
-                const entry = entries.find(e => e.habitId === habit.id);
-                const done = entry?.completed ?? false;
-                return (
-                  <TouchableOpacity
-                    key={habit.id}
-                    onPress={() => handleToggleHabit(habit)}
-                    className={`px-5 py-4 flex-row items-center justify-between ${divider}`}
-                  >
-                    <View className="flex-row items-center" style={{ gap: 12 }}>
-                      <Ionicons
-                        name={ICON_MAP[habit.iconKey as any] ?? 'ellipse-outline'}
-                        size={18}
-                        color={done ? iconColor : mutedColor}
-                      />
-                      <Text className={`text-base ${done ? 'text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-white'}`}>
-                        {habit.name}
-                      </Text>
-                    </View>
-                    <Ionicons
-                      name={done ? 'checkmark-circle' : 'ellipse-outline'}
-                      size={20}
-                      color={done ? iconColor : mutedColor}
-                    />
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          )}
+          </View>
 
           {/* ── STATS ── */}
-          {step === 'stats' && (
-            <View className="border-t border-gray-100 dark:border-gray-800">
-              {stats.length === 0 ? (
-                <View className={`px-5 py-4 ${divider}`}>
-                  <Text className="text-sm text-gray-400 dark:text-gray-500">No stats enabled.</Text>
-                </View>
-              ) : stats.map(stat => (
-                <View
+          <View>
+            <SectionHeader label="Stats" />
+            <View style={{ paddingHorizontal: 16, gap: 10 }}>
+              {pendingStats.map(stat => (
+                <StatCard
                   key={stat.id}
-                  className={`px-5 py-4 flex-row items-center justify-between ${divider}`}
-                >
-                  <View>
-                    <Text className="text-base text-gray-900 dark:text-white">{stat.label}</Text>
-                    {stat.unit ? (
-                      <Text className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{stat.unit}</Text>
-                    ) : null}
-                  </View>
-                  <TextInput
-                    value={statInputs[stat.id] ?? ''}
-                    onChangeText={text => setStatInputs(prev => ({ ...prev, [stat.id]: text }))}
-                    onBlur={() => handleStatBlur(stat.id)}
-                    onSubmitEditing={() => handleStatBlur(stat.id)}
-                    placeholder="—"
-                    placeholderTextColor={mutedColor}
-                    keyboardType="numeric"
-                    returnKeyType="done"
-                    className="text-base text-gray-900 dark:text-white text-right"
-                    style={{ minWidth: 60 }}
-                  />
-                </View>
+                  stat={stat}
+                  isDark={isDark}
+                  today={today}
+                  onSubmitted={handleStatSubmitted}
+                />
               ))}
+              {/* "+" stat card — full-width rectangle */}
+              <TouchableOpacity onPress={() => setModalOpen('stat')} activeOpacity={0.7} style={plusCardStyle}>
+                <Text style={plusTextStyle}>+</Text>
+              </TouchableOpacity>
             </View>
-          )}
-
-          {/* ── REFLECTION ── */}
-          {step === 'reflection' && (
-            <View className="px-5 pt-8">
-              <TextInput
-                value={reflection}
-                onChangeText={setReflection}
-                placeholder="One key moment from today…"
-                placeholderTextColor={mutedColor}
-                multiline
-                autoFocus
-                className="text-base text-gray-900 dark:text-white"
-                style={{ lineHeight: 24, minHeight: 80 }}
-              />
-              <Text className={`text-xs mt-4 ${wordCountOver ? 'text-red-400' : 'text-gray-400 dark:text-gray-500'}`}>
-                {wordCount} / 10 words
-              </Text>
-            </View>
-          )}
-
-          <View style={{ height: 40 }} />
+          </View>
         </ScrollView>
-
-        {/* Step footer */}
-        <View className="border-t border-gray-100 dark:border-gray-800 px-5 py-4 flex-row items-center justify-between">
-          {/* Back button — hidden on the first step */}
-          {STEP_ORDER.indexOf(step) > 0 ? (
-            <TouchableOpacity onPress={goPrev} hitSlop={8}>
-              <Text className="text-sm text-gray-400 dark:text-gray-500">Back</Text>
-            </TouchableOpacity>
-          ) : (
-            <View />
-          )}
-
-          {/* Forward button */}
-          {step === 'reflection' ? (
-            <TouchableOpacity
-              onPress={handleSaveReflection}
-              disabled={savingReflection || !reflectionValid}
-              hitSlop={8}
-            >
-              {savingReflection ? (
-                <ActivityIndicator size="small" color={mutedColor} />
-              ) : (
-                <Text className={`text-sm ${reflectionValid ? 'text-gray-400 dark:text-gray-500' : 'text-gray-300 dark:text-gray-700'}`}>
-                  Done
-                </Text>
-              )}
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity
-              onPress={step === 'stats' ? handleStatsNext : goNext}
-              hitSlop={8}
-            >
-              <Text className="text-sm text-gray-400 dark:text-gray-500">Continue</Text>
-            </TouchableOpacity>
-          )}
-        </View>
       </KeyboardAvoidingView>
+
+      {/* Creation modals */}
+      <CreateHabitModal
+        isDark={isDark}
+        visible={modalOpen === 'habit'}
+        onClose={() => setModalOpen(null)}
+        onCreate={handleHabitCreated}
+      />
+      <CreateTaskModal
+        isDark={isDark}
+        visible={modalOpen === 'task'}
+        today={today}
+        sortOrder={tasks.length}
+        onClose={() => setModalOpen(null)}
+        onCreate={handleTaskCreated}
+      />
+      <CreateStatModal
+        isDark={isDark}
+        visible={modalOpen === 'stat'}
+        onClose={() => setModalOpen(null)}
+        onCreate={handleStatCreated}
+      />
     </SafeAreaView>
   );
 }
