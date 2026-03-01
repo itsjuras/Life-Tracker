@@ -526,15 +526,18 @@ function TaskCard({
 
 // ── StatCard — glass input card that pops and disappears on value submit ──────
 function StatCard({
-  stat, isDark, today, completed, onSubmitted,
+  stat, isDark, today, completed, completedValue, onSubmitted, onUndo, initialValue,
 }: {
   stat: StatDefinition; isDark: boolean; today: string;
   completed?: boolean;
-  onSubmitted: (id: string) => void;
+  completedValue?: number;
+  onSubmitted: (id: string, value: number) => void;
+  onUndo?: (id: string) => void;
+  initialValue?: number;
 }) {
   const scale = useRef(new Animated.Value(1)).current;
   const opacity = useRef(new Animated.Value(1)).current;
-  const [value, setValue] = useState('');
+  const [value, setValue] = useState(initialValue !== undefined ? String(initialValue) : '');
   const submittedRef = useRef(false);
 
   const handleSubmit = () => {
@@ -549,31 +552,35 @@ function StatCard({
         Animated.timing(scale, { toValue: 0.88, duration: 200, useNativeDriver: true }),
         Animated.timing(opacity, { toValue: 0, duration: 200, useNativeDriver: true }),
       ]),
-    ]).start(() => onSubmitted(stat.id));
+    ]).start(() => onSubmitted(stat.id, val));
   };
 
   if (completed) {
     return (
-      <View style={{
-        ...glassCard(isDark),
-        backgroundColor: 'rgba(34,197,94,0.07)',
-        borderColor: 'rgba(34,197,94,0.25)',
-        paddingVertical: 14,
-        paddingHorizontal: 18,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-      }}>
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 11, fontWeight: '600', color: 'rgba(34,197,94,0.7)', textDecorationLine: 'line-through', textTransform: 'uppercase', letterSpacing: 1.5 }}>
-            {stat.label}
+      <TouchableOpacity onPress={() => onUndo?.(stat.id)} activeOpacity={0.7} disabled={!onUndo}>
+        <View style={{
+          ...glassCard(isDark),
+          backgroundColor: 'rgba(34,197,94,0.07)',
+          borderColor: 'rgba(34,197,94,0.25)',
+          paddingVertical: 14,
+          paddingHorizontal: 18,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 11, fontWeight: '600', color: 'rgba(34,197,94,0.7)', textDecorationLine: 'line-through', textTransform: 'uppercase', letterSpacing: 1.5 }}>
+              {stat.label}
+            </Text>
+            {stat.unit ? (
+              <Text style={{ fontSize: 9, color: '#9ca3af', marginTop: 2, textTransform: 'uppercase', letterSpacing: 0.8 }}>{stat.unit}</Text>
+            ) : null}
+          </View>
+          <Text style={{ fontSize: 15, fontWeight: '600', color: 'rgba(34,197,94,0.8)' }}>
+            {completedValue !== undefined ? String(completedValue) : '✓'}
           </Text>
-          {stat.unit ? (
-            <Text style={{ fontSize: 9, color: '#9ca3af', marginTop: 2, textTransform: 'uppercase', letterSpacing: 0.8 }}>{stat.unit}</Text>
-          ) : null}
         </View>
-        <Ionicons name="checkmark" size={16} color="rgba(34,197,94,0.6)" />
-      </View>
+      </TouchableOpacity>
     );
   }
 
@@ -706,6 +713,7 @@ export default function HomeScreen() {
   const [completedTaskIds, setCompletedTaskIds] = useState<Set<string>>(new Set());
   const [stats, setStats] = useState<StatDefinition[]>([]);
   const [submittedStatIds, setSubmittedStatIds] = useState<Set<string>>(new Set());
+  const [statEntryValues, setStatEntryValues] = useState<Map<string, number>>(new Map());
   const [modalOpen, setModalOpen] = useState<'habit' | 'task' | 'stat' | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [hasReflection, setHasReflection] = useState(false);
@@ -738,6 +746,9 @@ export default function HomeScreen() {
       setCompletedTaskIds(new Set(t.filter(tk => tk.completed).map(tk => tk.id)));
       setStats(s.filter(st => st.enabled));
       setSubmittedStatIds(new Set(se.map(en => en.statDefinitionId)));
+      const valueMap = new Map<string, number>();
+      se.forEach(en => valueMap.set(en.statDefinitionId, en.value));
+      setStatEntryValues(valueMap);
       setHasReflection(!!reflection);
     } catch { /* silent */ } finally {
       setLoading(false);
@@ -784,9 +795,15 @@ export default function HomeScreen() {
     }
   }
 
-  function handleStatSubmitted(id: string) {
+  function handleStatSubmitted(id: string, value: number) {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setSubmittedStatIds(prev => new Set([...prev, id]));
+    setStatEntryValues(prev => new Map([...prev, [id, value]]));
+  }
+
+  function handleStatUndo(id: string) {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setSubmittedStatIds(prev => { const n = new Set(prev); n.delete(id); return n; });
   }
 
   function handleHabitCreated(habit: Habit) {
@@ -971,6 +988,7 @@ export default function HomeScreen() {
                         isDark={isDark}
                         today={today}
                         onSubmitted={handleStatSubmitted}
+                        initialValue={statEntryValues.get(stat.id)}
                       />
                     ))}
                     {editMode && stats.filter(s => submittedStatIds.has(s.id)).map(stat => (
@@ -980,7 +998,9 @@ export default function HomeScreen() {
                         isDark={isDark}
                         today={today}
                         completed
+                        completedValue={statEntryValues.get(stat.id)}
                         onSubmitted={handleStatSubmitted}
+                        onUndo={handleStatUndo}
                       />
                     ))}
                     {editMode && (
