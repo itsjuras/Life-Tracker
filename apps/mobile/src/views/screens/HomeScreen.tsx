@@ -488,7 +488,7 @@ function TaskCard({
         activeOpacity={0.85}
         style={{
           ...glassCard(isDark),
-          paddingVertical: 16,
+          height: 50,
           paddingHorizontal: 18,
           flexDirection: 'row',
           alignItems: 'center',
@@ -562,7 +562,7 @@ function StatCard({
           ...glassCard(isDark),
           backgroundColor: 'rgba(34,197,94,0.07)',
           borderColor: 'rgba(34,197,94,0.25)',
-          paddingVertical: 14,
+          height: 50,
           paddingHorizontal: 18,
           flexDirection: 'row',
           alignItems: 'center',
@@ -588,7 +588,7 @@ function StatCard({
     <Animated.View style={{ transform: [{ scale }], opacity }}>
       <View style={{
         ...glassCard(isDark),
-        paddingVertical: 14,
+        height: 50,
         paddingHorizontal: 18,
         flexDirection: 'row',
         alignItems: 'center',
@@ -1025,7 +1025,7 @@ export default function HomeScreen() {
                         ...glassCard(isDark),
                         backgroundColor: 'rgba(34,197,94,0.07)',
                         borderColor: 'rgba(34,197,94,0.25)',
-                        paddingVertical: 14,
+                        height: 50,
                         paddingHorizontal: 18,
                         flexDirection: 'row',
                         alignItems: 'center',
