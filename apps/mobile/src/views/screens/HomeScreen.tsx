@@ -445,6 +445,8 @@ function HabitCell({
           color: isGreen ? 'rgba(34,197,94,0.6)' : (isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.3)'),
           maxWidth: cellSize,
           textAlign: 'center',
+          textTransform: 'uppercase',
+          letterSpacing: 0.5,
         }}
       >
         {habit.name}
@@ -508,9 +510,12 @@ function TaskCard({
           {isGreen && <Ionicons name="checkmark" size={11} color="#22c55e" />}
         </View>
         <Text style={{
-          flex: 1, fontSize: 15,
+          flex: 1, fontSize: 11,
           color: isGreen ? 'rgba(34,197,94,0.85)' : (isDark ? '#f9fafb' : '#111827'),
           textDecorationLine: completed ? 'line-through' : 'none',
+          textTransform: 'uppercase',
+          letterSpacing: 1.5,
+          fontWeight: '600',
         }}>
           {task.title}
         </Text>
@@ -560,11 +565,11 @@ function StatCard({
         justifyContent: 'space-between',
       }}>
         <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 15, color: 'rgba(34,197,94,0.7)', textDecorationLine: 'line-through' }}>
+          <Text style={{ fontSize: 11, fontWeight: '600', color: 'rgba(34,197,94,0.7)', textDecorationLine: 'line-through', textTransform: 'uppercase', letterSpacing: 1.5 }}>
             {stat.label}
           </Text>
           {stat.unit ? (
-            <Text style={{ fontSize: 11, color: '#9ca3af', marginTop: 1 }}>{stat.unit}</Text>
+            <Text style={{ fontSize: 9, color: '#9ca3af', marginTop: 2, textTransform: 'uppercase', letterSpacing: 0.8 }}>{stat.unit}</Text>
           ) : null}
         </View>
         <Ionicons name="checkmark" size={16} color="rgba(34,197,94,0.6)" />
@@ -583,9 +588,9 @@ function StatCard({
         justifyContent: 'space-between',
       }}>
         <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 15, color: isDark ? '#f9fafb' : '#111827' }}>{stat.label}</Text>
+          <Text style={{ fontSize: 11, fontWeight: '600', color: isDark ? '#f9fafb' : '#111827', textTransform: 'uppercase', letterSpacing: 1.5 }}>{stat.label}</Text>
           {stat.unit ? (
-            <Text style={{ fontSize: 11, color: '#9ca3af', marginTop: 1 }}>{stat.unit}</Text>
+            <Text style={{ fontSize: 9, color: '#9ca3af', marginTop: 2, textTransform: 'uppercase', letterSpacing: 0.8 }}>{stat.unit}</Text>
           ) : null}
         </View>
         <TextInput
@@ -1006,7 +1011,7 @@ export default function HomeScreen() {
               {/* ── DONE ── */}
               {showDone && (
                 <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-                  <Text style={{ fontSize: 48, fontWeight: '700', color: isDark ? '#f9fafb' : '#111827', letterSpacing: 1 }}>
+                  <Text style={{ fontSize: 32, fontWeight: '700', color: isDark ? '#f9fafb' : '#111827', letterSpacing: 8, textTransform: 'uppercase' }}>
                     done.
                   </Text>
                 </View>
