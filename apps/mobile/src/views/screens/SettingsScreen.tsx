@@ -192,12 +192,12 @@ export default function SettingsScreen({ onEditTracking }: Props) {
                 className="flex-row items-center justify-between"
                 onPress={() => setEditingUsername(true)}
               >
-                <Text style={muted}>Username</Text>
+                <Text style={label()}>Username</Text>
                 <View className="flex-row items-center" style={{ gap: 8 }}>
-                  <Text style={label()}>
+                  <Text style={muted}>
                     {profile?.username ?? '—'}
                   </Text>
-                  <Ionicons name="pencil-outline" size={14} color="#9ca3af" />
+                  <Ionicons name="create-outline" size={14} color="#9ca3af" />
                 </View>
               </TouchableOpacity>
             )}
@@ -205,7 +205,7 @@ export default function SettingsScreen({ onEditTracking }: Props) {
 
           {/* Email (read-only) */}
           <View className="px-5 py-4 flex-row items-center justify-between">
-            <Text style={muted}>Email</Text>
+            <Text style={label()}>Email</Text>
             <Text style={muted}>
               {session?.user.email ?? '—'}
             </Text>
@@ -223,6 +223,7 @@ export default function SettingsScreen({ onEditTracking }: Props) {
               onValueChange={toggleTheme}
               trackColor={{ false: '#d1d5db', true: '#374151' }}
               thumbColor="#ffffff"
+              style={{ transform: [{ scale: 0.8 }] }}
             />
           </View>
         </View>
