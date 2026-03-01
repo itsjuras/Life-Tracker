@@ -6,6 +6,14 @@
 -- instead of maintaining our own users table.
 -- ============================================================
 
+-- Drop tables from a previous run (CASCADE removes dependent policies/indexes)
+DROP TABLE IF EXISTS reflection_entries CASCADE;
+DROP TABLE IF EXISTS stat_entries       CASCADE;
+DROP TABLE IF EXISTS stat_definitions   CASCADE;
+DROP TABLE IF EXISTS tasks              CASCADE;
+DROP TABLE IF EXISTS habit_entries      CASCADE;
+DROP TABLE IF EXISTS habits             CASCADE;
+
 -- ─── Habits ────────────────────────────────────────────────
 CREATE TABLE habits (
   id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
