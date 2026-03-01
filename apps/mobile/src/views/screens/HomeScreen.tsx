@@ -886,7 +886,7 @@ export default function HomeScreen() {
           className="flex-1"
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{ paddingBottom: 48, flexGrow: 1 }}
+          contentContainerStyle={{ paddingBottom: 112, flexGrow: 1 }}
         >
           <>
               {/* ── HABITS ── */}
