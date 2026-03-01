@@ -12,6 +12,7 @@ import { useToday } from '../../hooks/useToday';
 import { fetchHabits, fetchEntriesForDate, toggleHabitEntry, createHabit } from '../../controllers/HabitController';
 import { fetchTasksForDate, createTask, toggleTask } from '../../controllers/TaskController';
 import { fetchStatDefinitions, logStatEntry, fetchAllStatEntriesForDate, createStatDefinition } from '../../controllers/StatController';
+import { fetchReflection, saveReflection } from '../../controllers/ReflectionController';
 import { Habit } from '../../models/Habit';
 import { Task } from '../../models/Task';
 import { StatDefinition } from '../../models/Stat';
@@ -607,6 +608,84 @@ function StatCard({
   );
 }
 
+// ── ReflectionPage — full-screen solo entry ───────────────────────────────────
+function ReflectionPage({
+  isDark, today, onSaved, onDismiss,
+}: {
+  isDark: boolean; today: string; onSaved: () => void; onDismiss: () => void;
+}) {
+  const [text, setText] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const wordCount = text.trim() ? text.trim().split(/\s+/).length : 0;
+  const MAX_WORDS = 10;
+
+  const handleChange = (val: string) => {
+    const words = val.trim().split(/\s+/).filter(Boolean);
+    if (words.length > MAX_WORDS) return;
+    setText(val);
+  };
+
+  const handleSave = async () => {
+    const trimmed = text.trim();
+    if (!trimmed || saving) return;
+    setSaving(true);
+    try {
+      await saveReflection(today, trimmed);
+      onSaved();
+    } catch { /* silent */ } finally { setSaving(false); }
+  };
+
+  return (
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <View style={{ paddingHorizontal: 20, paddingTop: 8 }}>
+        <TouchableOpacity onPress={onDismiss} hitSlop={8}>
+          <Ionicons name="close" size={20} color={isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.35)'} />
+        </TouchableOpacity>
+      </View>
+      <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 28 }}>
+        <TextInput
+          value={text}
+          onChangeText={handleChange}
+          placeholder="TODAY'S HIGHLIGHT"
+          placeholderTextColor={isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'}
+          multiline
+          autoFocus
+          blurOnSubmit
+          onSubmitEditing={handleSave}
+          style={{
+            fontSize: 20,
+            fontWeight: '500',
+            color: isDark ? '#f9fafb' : '#111827',
+            textAlignVertical: 'top',
+            paddingVertical: 4,
+          }}
+        />
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 24 }}>
+          <Text style={{ fontSize: 12, color: isDark ? 'rgba(255,255,255,0.28)' : 'rgba(0,0,0,0.3)' }}>
+            {wordCount} / {MAX_WORDS}
+          </Text>
+          <TouchableOpacity
+            onPress={handleSave}
+            disabled={!text.trim() || saving}
+            style={{
+              paddingHorizontal: 24, paddingVertical: 12, borderRadius: 14,
+              backgroundColor: text.trim() ? '#22c55e' : (isDark ? 'rgba(255,255,255,0.07)' : '#f3f4f6'),
+            }}
+          >
+            <Text style={{
+              fontSize: 15, fontWeight: '600',
+              color: text.trim() ? '#fff' : (isDark ? 'rgba(255,255,255,0.25)' : '#9ca3af'),
+            }}>
+              {saving ? 'Saving…' : 'Save'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </KeyboardAvoidingView>
+  );
+}
+
 // ── HomeScreen ────────────────────────────────────────────────────────────────
 export default function HomeScreen() {
   const today = useToday();
@@ -624,6 +703,9 @@ export default function HomeScreen() {
   const [submittedStatIds, setSubmittedStatIds] = useState<Set<string>>(new Set());
   const [modalOpen, setModalOpen] = useState<'habit' | 'task' | 'stat' | null>(null);
   const [editMode, setEditMode] = useState(false);
+  const [hasReflection, setHasReflection] = useState(false);
+  const [reflectionOpen, setReflectionOpen] = useState(false);
+  const [reflectionDismissed, setReflectionDismissed] = useState(false);
 
   const HABIT_GAP = 12;
   const HABIT_PADDING = 20;
@@ -637,12 +719,13 @@ export default function HomeScreen() {
   async function loadAll() {
     setLoading(true);
     try {
-      const [h, e, t, s, se] = await Promise.all([
+      const [h, e, t, s, se, reflection] = await Promise.all([
         fetchHabits(),
         fetchEntriesForDate(today),
         fetchTasksForDate(today),
         fetchStatDefinitions(),
         fetchAllStatEntriesForDate(today),
+        fetchReflection(today),
       ]);
       setHabits(h);
       setCompletedHabitIds(new Set(e.filter(en => en.completed).map(en => en.habitId)));
@@ -650,6 +733,7 @@ export default function HomeScreen() {
       setCompletedTaskIds(new Set(t.filter(tk => tk.completed).map(tk => tk.id)));
       setStats(s.filter(st => st.enabled));
       setSubmittedStatIds(new Set(se.map(en => en.statDefinitionId)));
+      setHasReflection(!!reflection);
     } catch { /* silent */ } finally {
       setLoading(false);
     }
@@ -741,8 +825,22 @@ export default function HomeScreen() {
     color: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.2)',
   };
 
+  const allHabitsTasksDone = pendingHabits.length === 0 && pendingTasks.length === 0;
+  const hasItemsToComplete = habits.length > 0 || tasks.length > 0;
+  const showReflectionCard = !editMode && !hasReflection && !reflectionDismissed && (reflectionOpen || (allHabitsTasksDone && hasItemsToComplete));
+  const showDone = !editMode && pendingHabits.length === 0 && pendingTasks.length === 0 && pendingStats.length === 0 && hasReflection;
+  const showEndDay = !editMode && !hasReflection && !showReflectionCard;
+
   return (
     <SafeAreaView className="flex-1 bg-white" style={isDark ? { backgroundColor: '#000000' } : undefined}>
+      {showReflectionCard ? (
+        <ReflectionPage
+          isDark={isDark}
+          today={today}
+          onSaved={() => { setHasReflection(true); setReflectionOpen(false); setReflectionDismissed(false); }}
+          onDismiss={() => { setReflectionOpen(false); setReflectionDismissed(true); }}
+        />
+      ) : (
       <KeyboardAvoidingView
         className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -764,15 +862,7 @@ export default function HomeScreen() {
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{ paddingBottom: 48, flexGrow: 1 }}
         >
-          {/* ── DONE STATE ── */}
-          {!editMode && pendingHabits.length === 0 && pendingTasks.length === 0 && pendingStats.length === 0 ? (
-            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ fontSize: 48, fontWeight: '700', color: isDark ? '#f9fafb' : '#111827', letterSpacing: 1 }}>
-                done.
-              </Text>
-            </View>
-          ) : (
-            <>
+          <>
               {/* ── HABITS ── */}
               {(pendingHabits.length > 0 || editMode) && (
                 <View>
@@ -896,10 +986,35 @@ export default function HomeScreen() {
                   </View>
                 </View>
               )}
+              {/* ── END DAY ── */}
+              {showEndDay && (
+                <TouchableOpacity
+                  onPress={() => { setReflectionOpen(true); setReflectionDismissed(false); }}
+                  style={{ alignSelf: 'center', marginTop: 28, marginBottom: 8 }}
+                  activeOpacity={0.6}
+                >
+                  <Text style={{
+                    fontSize: 11, letterSpacing: 3, fontWeight: '600',
+                    textTransform: 'uppercase',
+                    color: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.25)',
+                  }}>
+                    end day
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {/* ── DONE ── */}
+              {showDone && (
+                <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={{ fontSize: 48, fontWeight: '700', color: isDark ? '#f9fafb' : '#111827', letterSpacing: 1 }}>
+                    done.
+                  </Text>
+                </View>
+              )}
             </>
-          )}
         </ScrollView>
       </KeyboardAvoidingView>
+      )}
 
       {/* Creation modals */}
       <CreateHabitModal
