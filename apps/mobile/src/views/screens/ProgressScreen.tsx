@@ -464,14 +464,14 @@ export default function ProgressScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView className="flex-1 bg-white dark:bg-gray-950 items-center justify-center">
+      <SafeAreaView className="flex-1 bg-white items-center justify-center" style={isDark ? { backgroundColor: '#000000' } : undefined}>
         <ActivityIndicator color={mutedColor} />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-white dark:bg-gray-950">
+    <SafeAreaView className="flex-1 bg-white" style={isDark ? { backgroundColor: '#000000' } : undefined}>
       <ScrollView showsVerticalScrollIndicator={false}>
 
         {/* ── HABIT CALENDAR ── */}
