@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { useColorScheme } from 'nativewind';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import HomeScreen from '../views/screens/HomeScreen';
 import ProgressScreen from '../views/screens/ProgressScreen';
 import LoginScreen from '../views/screens/LoginScreen';
@@ -32,7 +33,12 @@ function SettingsTab() {
 export default function AppNavigator() {
   const { profile } = useAuth();
   const { colorScheme } = useColorScheme();
+  const { setAccentColor } = useTheme();
   const isDark = colorScheme === 'dark';
+
+  useEffect(() => {
+    if (profile?.accent_color) setAccentColor(profile.accent_color);
+  }, [profile?.accent_color]);
 
   return (
     <NavigationContainer>

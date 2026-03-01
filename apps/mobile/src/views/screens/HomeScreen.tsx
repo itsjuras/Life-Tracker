@@ -8,6 +8,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useColorScheme } from 'nativewind';
+import { useTheme, hexToRgba } from '../../context/ThemeContext';
 import { useToday } from '../../hooks/useToday';
 import { fetchHabits, fetchEntriesForDate, toggleHabitEntry, createHabit } from '../../controllers/HabitController';
 import { fetchTasksForDate, createTask, toggleTask } from '../../controllers/TaskController';
@@ -110,6 +111,7 @@ function ModalButtons({
   isDark: boolean; onCancel: () => void; onConfirm: () => void;
   confirmLabel: string; confirmEnabled: boolean; saving: boolean;
 }) {
+  const { accentColor } = useTheme();
   return (
     <View style={{ flexDirection: 'row', gap: 12, marginTop: 20 }}>
       <TouchableOpacity
@@ -130,7 +132,7 @@ function ModalButtons({
         style={{
           flex: 1, paddingVertical: 14, borderRadius: 12,
           alignItems: 'center',
-          backgroundColor: confirmEnabled ? '#22c55e' : (isDark ? 'rgba(255,255,255,0.07)' : '#f3f4f6'),
+          backgroundColor: confirmEnabled ? accentColor : (isDark ? 'rgba(255,255,255,0.07)' : '#f3f4f6'),
           opacity: saving ? 0.6 : 1,
         }}
       >
@@ -152,6 +154,7 @@ function CreateHabitModal({
   isDark: boolean; visible: boolean;
   onClose: () => void; onCreate: (h: Habit) => void;
 }) {
+  const { accentColor } = useTheme();
   const [name, setName] = useState('');
   const [selectedIcon, setSelectedIcon] = useState<IconKey>('heart');
   const [saving, setSaving] = useState(false);
@@ -208,16 +211,16 @@ function CreateHabitModal({
                   width: 42, height: 42, borderRadius: 10,
                   alignItems: 'center', justifyContent: 'center',
                   backgroundColor: isSelected
-                    ? 'rgba(34,197,94,0.18)'
+                    ? hexToRgba(accentColor, 0.18)
                     : (isDark ? 'rgba(255,255,255,0.07)' : '#f3f4f6'),
                   borderWidth: 1.5,
-                  borderColor: isSelected ? 'rgba(34,197,94,0.5)' : 'transparent',
+                  borderColor: isSelected ? hexToRgba(accentColor, 0.5) : 'transparent',
                 }}
               >
                 <Ionicons
                   name={ICON_MAP[key]}
                   size={20}
-                  color={isSelected ? '#22c55e' : (isDark ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.4)')}
+                  color={isSelected ? accentColor : (isDark ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.4)')}
                 />
               </TouchableOpacity>
             );
@@ -391,6 +394,7 @@ function HabitCell({
   const opacity = useRef(new Animated.Value(1)).current;
   const [activated, setActivated] = useState(false);
 
+  const { accentColor } = useTheme();
   const iconName = ICON_MAP[habit.iconKey as keyof typeof ICON_MAP] ?? 'ellipse-outline';
   const isGreen = completed || activated;
 
@@ -418,11 +422,11 @@ function HabitCell({
           alignItems: 'center',
           justifyContent: 'center',
           backgroundColor: isGreen
-            ? 'rgba(34,197,94,0.18)'
+            ? hexToRgba(accentColor, 0.18)
             : (isDark ? 'rgba(255,255,255,0.07)' : '#f9fafb'),
           borderWidth: 1,
           borderColor: isGreen
-            ? 'rgba(34,197,94,0.4)'
+            ? hexToRgba(accentColor, 0.4)
             : (isDark ? 'rgba(255,255,255,0.11)' : 'rgba(209,213,219,0.7)'),
           shadowColor: '#000',
           shadowOffset: { width: 0, height: 2 },
@@ -434,7 +438,7 @@ function HabitCell({
         <Ionicons
           name={iconName}
           size={Math.floor(cellSize * 0.38)}
-          color={isGreen ? '#22c55e' : (isDark ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.38)')}
+          color={isGreen ? accentColor : (isDark ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.38)')}
         />
       </TouchableOpacity>
       <Text
@@ -442,7 +446,7 @@ function HabitCell({
         style={{
           fontSize: 9,
           marginTop: 5,
-          color: isGreen ? 'rgba(34,197,94,0.6)' : (isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.3)'),
+          color: isGreen ? hexToRgba(accentColor, 0.6) : (isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.3)'),
           maxWidth: cellSize,
           textAlign: 'center',
           textTransform: 'uppercase',
@@ -464,6 +468,7 @@ function TaskCard({
   onComplete: (id: string) => void;
   onUndo?: (id: string) => void;
 }) {
+  const { accentColor } = useTheme();
   const scale = useRef(new Animated.Value(1)).current;
   const opacity = useRef(new Animated.Value(1)).current;
   const [activated, setActivated] = useState(false);
@@ -494,24 +499,24 @@ function TaskCard({
           alignItems: 'center',
           gap: 14,
           ...(isGreen ? {
-            backgroundColor: 'rgba(34,197,94,0.12)',
-            borderColor: 'rgba(34,197,94,0.35)',
+            backgroundColor: hexToRgba(accentColor, 0.12),
+            borderColor: hexToRgba(accentColor, 0.35),
           } : {}),
         }}
       >
         <View style={{
           width: 18, height: 18, borderRadius: 9,
           borderWidth: 1.5,
-          borderColor: isGreen ? '#22c55e' : (isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.2)'),
-          backgroundColor: isGreen ? 'rgba(34,197,94,0.2)' : 'transparent',
+          borderColor: isGreen ? accentColor : (isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.2)'),
+          backgroundColor: isGreen ? hexToRgba(accentColor, 0.2) : 'transparent',
           alignItems: 'center',
           justifyContent: 'center',
         }}>
-          {isGreen && <Ionicons name="checkmark" size={11} color="#22c55e" />}
+          {isGreen && <Ionicons name="checkmark" size={11} color={accentColor} />}
         </View>
         <Text style={{
           flex: 1, fontSize: 11,
-          color: isGreen ? 'rgba(34,197,94,0.85)' : (isDark ? '#f9fafb' : '#111827'),
+          color: isGreen ? hexToRgba(accentColor, 0.85) : (isDark ? '#f9fafb' : '#111827'),
           textDecorationLine: completed ? 'line-through' : 'none',
           textTransform: 'uppercase',
           letterSpacing: 1.5,
@@ -535,6 +540,7 @@ function StatCard({
   onUndo?: (id: string) => void;
   initialValue?: number;
 }) {
+  const { accentColor } = useTheme();
   const scale = useRef(new Animated.Value(1)).current;
   const opacity = useRef(new Animated.Value(1)).current;
   const [value, setValue] = useState(initialValue !== undefined ? String(initialValue) : '');
@@ -560,8 +566,8 @@ function StatCard({
       <TouchableOpacity onPress={() => onUndo?.(stat.id)} activeOpacity={0.7} disabled={!onUndo}>
         <View style={{
           ...glassCard(isDark),
-          backgroundColor: 'rgba(34,197,94,0.07)',
-          borderColor: 'rgba(34,197,94,0.25)',
+          backgroundColor: hexToRgba(accentColor, 0.07),
+          borderColor: hexToRgba(accentColor, 0.25),
           height: 50,
           paddingHorizontal: 18,
           flexDirection: 'row',
@@ -569,14 +575,14 @@ function StatCard({
           justifyContent: 'space-between',
         }}>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 11, fontWeight: '600', color: 'rgba(34,197,94,0.7)', textDecorationLine: 'line-through', textTransform: 'uppercase', letterSpacing: 1.5 }}>
+            <Text style={{ fontSize: 11, fontWeight: '600', color: hexToRgba(accentColor, 0.7), textDecorationLine: 'line-through', textTransform: 'uppercase', letterSpacing: 1.5 }}>
               {stat.label}
             </Text>
             {stat.unit ? (
               <Text style={{ fontSize: 9, color: '#9ca3af', marginTop: 2, textTransform: 'uppercase', letterSpacing: 0.8 }}>{stat.unit}</Text>
             ) : null}
           </View>
-          <Text style={{ fontSize: 15, fontWeight: '600', color: 'rgba(34,197,94,0.8)' }}>
+          <Text style={{ fontSize: 15, fontWeight: '600', color: hexToRgba(accentColor, 0.8) }}>
             {completedValue !== undefined ? String(completedValue) : '✓'}
           </Text>
         </View>
@@ -626,6 +632,7 @@ function ReflectionPage({
 }: {
   isDark: boolean; today: string; initialText?: string; onSaved: (text: string) => void; onDismiss: () => void;
 }) {
+  const { accentColor } = useTheme();
   const [text, setText] = useState(initialText ?? '');
   const [saving, setSaving] = useState(false);
 
@@ -682,7 +689,7 @@ function ReflectionPage({
             disabled={!text.trim() || saving}
             style={{
               paddingHorizontal: 24, paddingVertical: 12, borderRadius: 14,
-              backgroundColor: text.trim() ? '#22c55e' : (isDark ? 'rgba(255,255,255,0.07)' : '#f3f4f6'),
+              backgroundColor: text.trim() ? accentColor : (isDark ? 'rgba(255,255,255,0.07)' : '#f3f4f6'),
             }}
           >
             <Text style={{
@@ -703,6 +710,7 @@ export default function HomeScreen() {
   const today = useToday();
   const { width: screenWidth } = useWindowDimensions();
   const { colorScheme } = useColorScheme();
+  const { accentColor } = useTheme();
   const isDark = colorScheme === 'dark';
   const mutedColor = '#9ca3af';
 
@@ -877,7 +885,7 @@ export default function HomeScreen() {
             <Ionicons
               name={editMode ? 'create' : 'create-outline'}
               size={18}
-              color={editMode ? '#22c55e' : mutedColor}
+              color={editMode ? accentColor : mutedColor}
             />
           </TouchableOpacity>
         </View>
@@ -1023,18 +1031,18 @@ export default function HomeScreen() {
                     <TouchableOpacity onPress={() => setReflectionEditOpen(true)} activeOpacity={0.7}>
                       <View style={{
                         ...glassCard(isDark),
-                        backgroundColor: 'rgba(34,197,94,0.07)',
-                        borderColor: 'rgba(34,197,94,0.25)',
+                        backgroundColor: hexToRgba(accentColor, 0.07),
+                        borderColor: hexToRgba(accentColor, 0.25),
                         height: 50,
                         paddingHorizontal: 18,
                         flexDirection: 'row',
                         alignItems: 'center',
                         justifyContent: 'space-between',
                       }}>
-                        <Text style={{ flex: 1, fontSize: 11, fontWeight: '600', color: 'rgba(34,197,94,0.7)', textTransform: 'uppercase', letterSpacing: 1.5 }}>
+                        <Text style={{ flex: 1, fontSize: 11, fontWeight: '600', color: hexToRgba(accentColor, 0.7), textTransform: 'uppercase', letterSpacing: 1.5 }}>
                           {reflectionText}
                         </Text>
-                        <Ionicons name="create-outline" size={14} color="rgba(34,197,94,0.6)" style={{ marginLeft: 10 }} />
+                        <Ionicons name="create-outline" size={14} color={hexToRgba(accentColor, 0.6)} style={{ marginLeft: 10 }} />
                       </View>
                     </TouchableOpacity>
                   </View>

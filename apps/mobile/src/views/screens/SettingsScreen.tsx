@@ -8,14 +8,16 @@ import {
   Alert,
   Switch,
   ScrollView,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import ColorPicker from 'react-native-wheel-color-picker';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { signOut, changePassword } from '../../controllers/AuthController';
-import { updateUsername, uploadAvatar } from '../../controllers/ProfileController';
+import { updateUsername, uploadAvatar, updateAccentColor } from '../../controllers/ProfileController';
 import Avatar from '../components/Avatar';
 
 function SectionHeader({ label }: { label: string }) {
@@ -34,7 +36,7 @@ interface Props {
 
 export default function SettingsScreen({ onEditTracking }: Props) {
   const { session, profile, refreshProfile } = useAuth();
-  const { isDark, toggleTheme } = useTheme();
+  const { isDark, toggleTheme, accentColor, setAccentColor } = useTheme();
 
   const [editingUsername, setEditingUsername] = useState(false);
   const [usernameInput, setUsernameInput] = useState('');
@@ -49,9 +51,15 @@ export default function SettingsScreen({ onEditTracking }: Props) {
   const [showNewPw, setShowNewPw] = useState(false);
   const [showConfirmPw, setShowConfirmPw] = useState(false);
 
+  const [colorPickerOpen, setColorPickerOpen] = useState(false);
+  const [pickedColor, setPickedColor] = useState(accentColor);
+
   useEffect(() => {
     if (profile?.username) setUsernameInput(profile.username);
   }, [profile?.username]);
+
+  // Keep picker in sync if accent changes externally (cross-device sync)
+  useEffect(() => { setPickedColor(accentColor); }, [accentColor]);
 
   async function handleAvatarPress() {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -125,6 +133,16 @@ export default function SettingsScreen({ onEditTracking }: Props) {
     setChangingPassword(false);
     setNewPassword('');
     setConfirmPassword('');
+  }
+
+  async function handleAccentSave() {
+    setAccentColor(pickedColor);
+    setColorPickerOpen(false);
+    if (session) {
+      try {
+        await updateAccentColor(session.user.id, pickedColor);
+      } catch { /* silent — local state already updated */ }
+    }
   }
 
   const label = () => ({
@@ -209,7 +227,7 @@ export default function SettingsScreen({ onEditTracking }: Props) {
         {/* Appearance */}
         <SectionHeader label="Appearance" />
         <View className={`border-t ${divider}`}>
-          <View className="px-5 py-4 flex-row items-center justify-between">
+          <View className={`px-5 py-4 flex-row items-center justify-between ${divider}`}>
             <Text style={label()}>Dark Mode</Text>
             <Switch
               value={isDark}
@@ -219,6 +237,13 @@ export default function SettingsScreen({ onEditTracking }: Props) {
               style={{ transform: [{ scale: 0.8 }] }}
             />
           </View>
+          <TouchableOpacity
+            className="px-5 py-4 flex-row items-center justify-between"
+            onPress={() => { setPickedColor(accentColor); setColorPickerOpen(true); }}
+          >
+            <Text style={label()}>Accent Colour</Text>
+            <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: accentColor }} />
+          </TouchableOpacity>
         </View>
 
         {/* Security */}
@@ -303,6 +328,36 @@ export default function SettingsScreen({ onEditTracking }: Props) {
         </TouchableOpacity>
 
       </ScrollView>
+
+      {/* Accent colour picker modal */}
+      <Modal visible={colorPickerOpen} transparent animationType="fade" onRequestClose={() => setColorPickerOpen(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ width: 320, backgroundColor: isDark ? '#111111' : '#ffffff', borderRadius: 24, paddingHorizontal: 24, paddingTop: 24, paddingBottom: 28, alignItems: 'center' }}>
+            <Text style={{ ...label(), marginBottom: 20 }}>Accent Colour</Text>
+            <View style={{ width: 272, height: 230 }}>
+              <ColorPicker
+                color={pickedColor}
+                onColorChange={setPickedColor}
+                thumbSize={22}
+                sliderSize={18}
+                noSnap
+                row={true}
+                swatches={false}
+                discrete={false}
+              />
+            </View>
+            <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 40, marginTop: 24 }}>
+              <TouchableOpacity onPress={() => setColorPickerOpen(false)} hitSlop={12}>
+                <Ionicons name="close-outline" size={28} color="#9ca3af" />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleAccentSave} hitSlop={12}>
+                <Ionicons name="checkmark-outline" size={28} color="#9ca3af" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
     </SafeAreaView>
   );
 }

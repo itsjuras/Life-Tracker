@@ -31,6 +31,14 @@ export async function updateUsername(userId: string, username: string): Promise<
   if (error) throw error;
 }
 
+export async function updateAccentColor(userId: string, accentColor: string): Promise<void> {
+  const { error } = await supabase
+    .from('profiles')
+    .update({ accent_color: accentColor })
+    .eq('id', userId);
+  if (error) throw error;
+}
+
 export async function uploadAvatar(userId: string, localUri: string): Promise<void> {
   const ext = localUri.split('.').pop()?.toLowerCase() ?? 'jpg';
   const path = `${userId}/avatar.${ext}`;

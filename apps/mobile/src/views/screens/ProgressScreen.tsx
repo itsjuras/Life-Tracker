@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { VictoryArea, VictoryChart, VictoryAxis } from 'victory-native';
 import { useColorScheme } from 'nativewind';
+import { useTheme, hexToRgba } from '../../context/ThemeContext';
 import { useToday } from '../../hooks/useToday';
 import { fetchHabits, fetchEntriesForDateRange } from '../../controllers/HabitController';
 import { fetchStatDefinitions, fetchStatEntries } from '../../controllers/StatController';
@@ -31,9 +32,9 @@ type RangeKey = typeof RANGE_OPTIONS[number]['key'];
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
-function habitColor(ratio: number | null, isDark: boolean): string {
+function habitColor(ratio: number | null, isDark: boolean, accentColor: string): string {
   if (ratio === null || ratio === 0) return isDark ? '#1f2937' : '#e5e7eb';
-  return `rgba(34, 197, 94, ${ratio.toFixed(2)})`;
+  return hexToRgba(accentColor, parseFloat(ratio.toFixed(2)));
 }
 
 
@@ -93,6 +94,7 @@ function CalendarCell({
   date: string | null; cellSize: number;
   ratio: number | null; isDark: boolean;
 }) {
+  const { accentColor } = useTheme();
   const swipeAnim = useRef(new Animated.Value(0)).current;
   const textOpacity = useRef(new Animated.Value(0)).current;
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -130,7 +132,7 @@ function CalendarCell({
         style={{
           width: cellSize,
           height: cellSize,
-          backgroundColor: habitColor(ratio, isDark),
+          backgroundColor: habitColor(ratio, isDark, accentColor),
           borderRadius: 4,
           overflow: 'hidden',
         }}
@@ -226,11 +228,12 @@ function StatChart({
   stat: StatDefinition; allEntries: StatEntry[]; today: string;
 }) {
   const { colorScheme } = useColorScheme();
+  const { accentColor } = useTheme();
   const isDark = colorScheme === 'dark';
   const mutedColor = '#9ca3af';
   const axisColor = isDark ? '#1f2937' : '#e5e7eb';
-  const chartLineColor = '#22c55e';
-  const chartFillColor = isDark ? '#166634' : '#bbf7d0';
+  const chartLineColor = accentColor;
+  const chartFillColor = hexToRgba(accentColor, 0.15);
   const { width: screenWidth } = useWindowDimensions();
   const chartWidth = screenWidth;
 
@@ -297,7 +300,7 @@ function StatChart({
               paddingVertical: 3,
               borderRadius: 12,
               backgroundColor: rangeKey === opt.key
-                ? '#22c55e'
+                ? accentColor
                 : (isDark ? '#1f2937' : '#f3f4f6'),
             }}
           >
