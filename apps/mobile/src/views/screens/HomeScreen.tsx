@@ -379,17 +379,22 @@ function CreateStatModal({
 
 // ── HabitCell — glass icon that pops green then fades away on press ───────────
 function HabitCell({
-  habit, isDark, cellSize, onComplete,
+  habit, isDark, cellSize, completed, onComplete, onUndo,
 }: {
-  habit: Habit; isDark: boolean; cellSize: number; onComplete: (id: string) => void;
+  habit: Habit; isDark: boolean; cellSize: number;
+  completed?: boolean;
+  onComplete: (id: string) => void;
+  onUndo?: (id: string) => void;
 }) {
   const scale = useRef(new Animated.Value(1)).current;
   const opacity = useRef(new Animated.Value(1)).current;
   const [activated, setActivated] = useState(false);
 
   const iconName = ICON_MAP[habit.iconKey as keyof typeof ICON_MAP] ?? 'ellipse-outline';
+  const isGreen = completed || activated;
 
   const handlePress = () => {
+    if (completed) { onUndo?.(habit.id); return; }
     setActivated(true);
     Animated.sequence([
       Animated.timing(scale, { toValue: 1.2, duration: 100, useNativeDriver: true }),
@@ -411,11 +416,11 @@ function HabitCell({
           borderRadius: 16,
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: activated
+          backgroundColor: isGreen
             ? 'rgba(34,197,94,0.18)'
             : (isDark ? 'rgba(255,255,255,0.07)' : '#f9fafb'),
           borderWidth: 1,
-          borderColor: activated
+          borderColor: isGreen
             ? 'rgba(34,197,94,0.4)'
             : (isDark ? 'rgba(255,255,255,0.11)' : 'rgba(209,213,219,0.7)'),
           shadowColor: '#000',
@@ -428,9 +433,7 @@ function HabitCell({
         <Ionicons
           name={iconName}
           size={Math.floor(cellSize * 0.38)}
-          color={activated
-            ? '#22c55e'
-            : (isDark ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.38)')}
+          color={isGreen ? '#22c55e' : (isDark ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.38)')}
         />
       </TouchableOpacity>
       <Text
@@ -438,7 +441,7 @@ function HabitCell({
         style={{
           fontSize: 9,
           marginTop: 5,
-          color: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.3)',
+          color: isGreen ? 'rgba(34,197,94,0.6)' : (isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.3)'),
           maxWidth: cellSize,
           textAlign: 'center',
         }}
@@ -451,14 +454,18 @@ function HabitCell({
 
 // ── TaskCard — glass rectangle that pops and disappears on press ──────────────
 function TaskCard({
-  task, isDark, onComplete,
+  task, isDark, completed, onComplete, onUndo,
 }: {
-  task: Task; isDark: boolean; onComplete: (id: string) => void;
+  task: Task; isDark: boolean;
+  completed?: boolean;
+  onComplete: (id: string) => void;
+  onUndo?: (id: string) => void;
 }) {
   const scale = useRef(new Animated.Value(1)).current;
   const opacity = useRef(new Animated.Value(1)).current;
 
   const handlePress = () => {
+    if (completed) { onUndo?.(task.id); return; }
     Animated.sequence([
       Animated.timing(scale, { toValue: 1.04, duration: 90, useNativeDriver: true }),
       Animated.parallel([
@@ -480,14 +487,27 @@ function TaskCard({
           flexDirection: 'row',
           alignItems: 'center',
           gap: 14,
+          ...(completed ? {
+            backgroundColor: 'rgba(34,197,94,0.07)',
+            borderColor: 'rgba(34,197,94,0.25)',
+          } : {}),
         }}
       >
         <View style={{
           width: 18, height: 18, borderRadius: 9,
           borderWidth: 1.5,
-          borderColor: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.2)',
-        }} />
-        <Text style={{ flex: 1, fontSize: 15, color: isDark ? '#f9fafb' : '#111827' }}>
+          borderColor: completed ? '#22c55e' : (isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.2)'),
+          backgroundColor: completed ? 'rgba(34,197,94,0.2)' : 'transparent',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+          {completed && <Ionicons name="checkmark" size={11} color="#22c55e" />}
+        </View>
+        <Text style={{
+          flex: 1, fontSize: 15,
+          color: completed ? 'rgba(34,197,94,0.7)' : (isDark ? '#f9fafb' : '#111827'),
+          textDecorationLine: completed ? 'line-through' : 'none',
+        }}>
           {task.title}
         </Text>
       </TouchableOpacity>
@@ -497,9 +517,11 @@ function TaskCard({
 
 // ── StatCard — glass input card that pops and disappears on value submit ──────
 function StatCard({
-  stat, isDark, today, onSubmitted,
+  stat, isDark, today, completed, onSubmitted,
 }: {
-  stat: StatDefinition; isDark: boolean; today: string; onSubmitted: (id: string) => void;
+  stat: StatDefinition; isDark: boolean; today: string;
+  completed?: boolean;
+  onSubmitted: (id: string) => void;
 }) {
   const scale = useRef(new Animated.Value(1)).current;
   const opacity = useRef(new Animated.Value(1)).current;
@@ -520,6 +542,31 @@ function StatCard({
       ]),
     ]).start(() => onSubmitted(stat.id));
   };
+
+  if (completed) {
+    return (
+      <View style={{
+        ...glassCard(isDark),
+        backgroundColor: 'rgba(34,197,94,0.07)',
+        borderColor: 'rgba(34,197,94,0.25)',
+        paddingVertical: 14,
+        paddingHorizontal: 18,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+      }}>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 15, color: 'rgba(34,197,94,0.7)', textDecorationLine: 'line-through' }}>
+            {stat.label}
+          </Text>
+          {stat.unit ? (
+            <Text style={{ fontSize: 11, color: '#9ca3af', marginTop: 1 }}>{stat.unit}</Text>
+          ) : null}
+        </View>
+        <Ionicons name="checkmark" size={16} color="rgba(34,197,94,0.6)" />
+      </View>
+    );
+  }
 
   return (
     <Animated.View style={{ transform: [{ scale }], opacity }}>
@@ -618,12 +665,30 @@ export default function HomeScreen() {
     }
   }
 
+  async function handleHabitUndo(id: string) {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setCompletedHabitIds(prev => { const n = new Set(prev); n.delete(id); return n; });
+    try { await toggleHabitEntry(id, today, false); } catch {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setCompletedHabitIds(prev => new Set([...prev, id]));
+    }
+  }
+
   async function handleTaskComplete(id: string) {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setCompletedTaskIds(prev => new Set([...prev, id]));
     try { await toggleTask(id, true); } catch {
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       setCompletedTaskIds(prev => { const n = new Set(prev); n.delete(id); return n; });
+    }
+  }
+
+  async function handleTaskUndo(id: string) {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setCompletedTaskIds(prev => { const n = new Set(prev); n.delete(id); return n; });
+    try { await toggleTask(id, false); } catch {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setCompletedTaskIds(prev => new Set([...prev, id]));
     }
   }
 
@@ -649,7 +714,7 @@ export default function HomeScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView className="flex-1 bg-white dark:bg-gray-950 items-center justify-center">
+      <SafeAreaView className="flex-1 bg-white items-center justify-center" style={isDark ? { backgroundColor: '#000000' } : undefined}>
         <ActivityIndicator color={mutedColor} />
       </SafeAreaView>
     );
@@ -657,7 +722,9 @@ export default function HomeScreen() {
 
   // Shared dashed "+" button style for full-width cards
   const plusCardStyle = {
-    ...glassCard(isDark),
+    backgroundColor: 'transparent',
+    borderRadius: 16,
+    borderWidth: 1,
     paddingVertical: 16,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
@@ -672,7 +739,7 @@ export default function HomeScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white dark:bg-gray-950">
+    <SafeAreaView className="flex-1 bg-white" style={isDark ? { backgroundColor: '#000000' } : undefined}>
       <KeyboardAvoidingView
         className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -723,6 +790,17 @@ export default function HomeScreen() {
                         onComplete={handleHabitComplete}
                       />
                     ))}
+                    {editMode && habits.filter(h => completedHabitIds.has(h.id)).map(habit => (
+                      <HabitCell
+                        key={`done-${habit.id}`}
+                        habit={habit}
+                        isDark={isDark}
+                        cellSize={cellSize}
+                        completed
+                        onComplete={handleHabitComplete}
+                        onUndo={handleHabitUndo}
+                      />
+                    ))}
                     {editMode && (
                       <TouchableOpacity
                         onPress={() => setModalOpen('habit')}
@@ -764,6 +842,16 @@ export default function HomeScreen() {
                         onComplete={handleTaskComplete}
                       />
                     ))}
+                    {editMode && tasks.filter(t => completedTaskIds.has(t.id)).map(task => (
+                      <TaskCard
+                        key={`done-${task.id}`}
+                        task={task}
+                        isDark={isDark}
+                        completed
+                        onComplete={handleTaskComplete}
+                        onUndo={handleTaskUndo}
+                      />
+                    ))}
                     {editMode && (
                       <TouchableOpacity onPress={() => setModalOpen('task')} activeOpacity={0.7} style={plusCardStyle}>
                         <Text style={plusTextStyle}>+</Text>
@@ -784,6 +872,16 @@ export default function HomeScreen() {
                         stat={stat}
                         isDark={isDark}
                         today={today}
+                        onSubmitted={handleStatSubmitted}
+                      />
+                    ))}
+                    {editMode && stats.filter(s => submittedStatIds.has(s.id)).map(stat => (
+                      <StatCard
+                        key={`done-${stat.id}`}
+                        stat={stat}
+                        isDark={isDark}
+                        today={today}
+                        completed
                         onSubmitted={handleStatSubmitted}
                       />
                     ))}
