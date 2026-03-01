@@ -558,9 +558,7 @@ function StatCard({
 }
 
 // ── HomeScreen ────────────────────────────────────────────────────────────────
-interface Props { onEdit: () => void; }
-
-export default function HomeScreen({ onEdit }: Props) {
+export default function HomeScreen() {
   const today = useToday();
   const { width: screenWidth } = useWindowDimensions();
   const { colorScheme } = useColorScheme();
@@ -575,6 +573,7 @@ export default function HomeScreen({ onEdit }: Props) {
   const [stats, setStats] = useState<StatDefinition[]>([]);
   const [submittedStatIds, setSubmittedStatIds] = useState<Set<string>>(new Set());
   const [modalOpen, setModalOpen] = useState<'habit' | 'task' | 'stat' | null>(null);
+  const [editMode, setEditMode] = useState(false);
 
   const HABIT_GAP = 12;
   const HABIT_PADDING = 20;
@@ -680,8 +679,12 @@ export default function HomeScreen({ onEdit }: Props) {
       >
         {/* Header */}
         <View className="flex-row items-center justify-end px-5 py-3">
-          <TouchableOpacity onPress={onEdit} hitSlop={8}>
-            <Ionicons name="create-outline" size={18} color={mutedColor} />
+          <TouchableOpacity onPress={() => setEditMode(e => !e)} hitSlop={8}>
+            <Ionicons
+              name={editMode ? 'create' : 'create-outline'}
+              size={18}
+              color={editMode ? '#22c55e' : mutedColor}
+            />
           </TouchableOpacity>
         </View>
 
@@ -689,91 +692,111 @@ export default function HomeScreen({ onEdit }: Props) {
           className="flex-1"
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{ paddingBottom: 48 }}
+          contentContainerStyle={{ paddingBottom: 48, flexGrow: 1 }}
         >
-          {/* ── HABITS ── */}
-          <View>
-            <SectionHeader label="Habits" />
-            <View style={{
-              flexDirection: 'row',
-              flexWrap: 'wrap',
-              paddingHorizontal: HABIT_PADDING,
-              gap: HABIT_GAP,
-              paddingBottom: 4,
-            }}>
-              {pendingHabits.map(habit => (
-                <HabitCell
-                  key={habit.id}
-                  habit={habit}
-                  isDark={isDark}
-                  cellSize={cellSize}
-                  onComplete={handleHabitComplete}
-                />
-              ))}
-              {/* "+" habit cell — same square size as habit cells */}
-              <TouchableOpacity
-                onPress={() => setModalOpen('habit')}
-                activeOpacity={0.7}
-                style={{
-                  width: cellSize,
-                  height: cellSize,
-                  borderRadius: 16,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderWidth: 1,
-                  borderStyle: 'dashed',
-                  borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.12)',
-                }}
-              >
-                <Text style={{
-                  fontSize: Math.floor(cellSize * 0.35),
-                  lineHeight: Math.floor(cellSize * 0.38),
-                  color: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.2)',
-                }}>
-                  +
-                </Text>
-              </TouchableOpacity>
+          {/* ── DONE STATE ── */}
+          {!editMode && pendingHabits.length === 0 && pendingTasks.length === 0 && pendingStats.length === 0 ? (
+            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ fontSize: 48, fontWeight: '700', color: isDark ? '#f9fafb' : '#111827', letterSpacing: 1 }}>
+                done.
+              </Text>
             </View>
-          </View>
+          ) : (
+            <>
+              {/* ── HABITS ── */}
+              {(pendingHabits.length > 0 || editMode) && (
+                <View>
+                  <SectionHeader label="Habits" />
+                  <View style={{
+                    flexDirection: 'row',
+                    flexWrap: 'wrap',
+                    paddingHorizontal: HABIT_PADDING,
+                    gap: HABIT_GAP,
+                    paddingBottom: 4,
+                  }}>
+                    {pendingHabits.map(habit => (
+                      <HabitCell
+                        key={habit.id}
+                        habit={habit}
+                        isDark={isDark}
+                        cellSize={cellSize}
+                        onComplete={handleHabitComplete}
+                      />
+                    ))}
+                    {editMode && (
+                      <TouchableOpacity
+                        onPress={() => setModalOpen('habit')}
+                        activeOpacity={0.7}
+                        style={{
+                          width: cellSize,
+                          height: cellSize,
+                          borderRadius: 16,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderWidth: 1,
+                          borderStyle: 'dashed',
+                          borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.12)',
+                        }}
+                      >
+                        <Text style={{
+                          fontSize: Math.floor(cellSize * 0.35),
+                          lineHeight: Math.floor(cellSize * 0.38),
+                          color: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.2)',
+                        }}>
+                          +
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
+              )}
 
-          {/* ── TASKS ── */}
-          <View>
-            <SectionHeader label="Tasks" />
-            <View style={{ paddingHorizontal: 16, gap: 10 }}>
-              {pendingTasks.map(task => (
-                <TaskCard
-                  key={task.id}
-                  task={task}
-                  isDark={isDark}
-                  onComplete={handleTaskComplete}
-                />
-              ))}
-              {/* "+" task card — full-width rectangle */}
-              <TouchableOpacity onPress={() => setModalOpen('task')} activeOpacity={0.7} style={plusCardStyle}>
-                <Text style={plusTextStyle}>+</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+              {/* ── TASKS ── */}
+              {(pendingTasks.length > 0 || editMode) && (
+                <View>
+                  <SectionHeader label="Tasks" />
+                  <View style={{ paddingHorizontal: 16, gap: 10 }}>
+                    {pendingTasks.map(task => (
+                      <TaskCard
+                        key={task.id}
+                        task={task}
+                        isDark={isDark}
+                        onComplete={handleTaskComplete}
+                      />
+                    ))}
+                    {editMode && (
+                      <TouchableOpacity onPress={() => setModalOpen('task')} activeOpacity={0.7} style={plusCardStyle}>
+                        <Text style={plusTextStyle}>+</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
+              )}
 
-          {/* ── STATS ── */}
-          <View>
-            <SectionHeader label="Stats" />
-            <View style={{ paddingHorizontal: 16, gap: 10 }}>
-              {pendingStats.map(stat => (
-                <StatCard
-                  key={stat.id}
-                  stat={stat}
-                  isDark={isDark}
-                  today={today}
-                  onSubmitted={handleStatSubmitted}
-                />
-              ))}
-              {/* "+" stat card — full-width rectangle */}
-              <TouchableOpacity onPress={() => setModalOpen('stat')} activeOpacity={0.7} style={plusCardStyle}>
-                <Text style={plusTextStyle}>+</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+              {/* ── STATS ── */}
+              {(pendingStats.length > 0 || editMode) && (
+                <View>
+                  <SectionHeader label="Stats" />
+                  <View style={{ paddingHorizontal: 16, gap: 10 }}>
+                    {pendingStats.map(stat => (
+                      <StatCard
+                        key={stat.id}
+                        stat={stat}
+                        isDark={isDark}
+                        today={today}
+                        onSubmitted={handleStatSubmitted}
+                      />
+                    ))}
+                    {editMode && (
+                      <TouchableOpacity onPress={() => setModalOpen('stat')} activeOpacity={0.7} style={plusCardStyle}>
+                        <Text style={plusTextStyle}>+</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
+              )}
+            </>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
 

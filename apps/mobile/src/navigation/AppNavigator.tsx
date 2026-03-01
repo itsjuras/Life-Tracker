@@ -14,13 +14,10 @@ import Avatar from '../views/components/Avatar';
 
 const Tab = createBottomTabNavigator();
 
-type HomePage = 'home' | 'tracking';
 type SettingsPage = 'settings' | 'tracking';
 
 function HomeTab() {
-  const [page, setPage] = useState<HomePage>('home');
-  if (page === 'tracking') return <TrackingManagerScreen onBack={() => setPage('home')} />;
-  return <HomeScreen onEdit={() => setPage('tracking')} />;
+  return <HomeScreen />;
 }
 
 function SettingsTab() {
