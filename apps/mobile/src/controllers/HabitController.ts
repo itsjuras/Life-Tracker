@@ -58,6 +58,16 @@ export async function toggleHabitEntry(
   return mapEntry(data);
 }
 
+export async function fetchEntriesForDateRange(from: string, to: string): Promise<HabitEntry[]> {
+  const { data, error } = await supabase
+    .from('habit_entries')
+    .select('*')
+    .gte('date', from)
+    .lte('date', to);
+  if (error) throw error;
+  return (data ?? []).map(mapEntry);
+}
+
 export async function createHabit(name: string, iconKey: string): Promise<Habit> {
   const userId = await getUserId();
   const { data, error } = await supabase
