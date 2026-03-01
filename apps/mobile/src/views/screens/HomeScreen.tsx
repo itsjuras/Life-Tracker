@@ -463,9 +463,12 @@ function TaskCard({
 }) {
   const scale = useRef(new Animated.Value(1)).current;
   const opacity = useRef(new Animated.Value(1)).current;
+  const [activated, setActivated] = useState(false);
+  const isGreen = completed || activated;
 
   const handlePress = () => {
     if (completed) { onUndo?.(task.id); return; }
+    setActivated(true);
     Animated.sequence([
       Animated.timing(scale, { toValue: 1.04, duration: 90, useNativeDriver: true }),
       Animated.parallel([
@@ -487,25 +490,25 @@ function TaskCard({
           flexDirection: 'row',
           alignItems: 'center',
           gap: 14,
-          ...(completed ? {
-            backgroundColor: 'rgba(34,197,94,0.07)',
-            borderColor: 'rgba(34,197,94,0.25)',
+          ...(isGreen ? {
+            backgroundColor: 'rgba(34,197,94,0.12)',
+            borderColor: 'rgba(34,197,94,0.35)',
           } : {}),
         }}
       >
         <View style={{
           width: 18, height: 18, borderRadius: 9,
           borderWidth: 1.5,
-          borderColor: completed ? '#22c55e' : (isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.2)'),
-          backgroundColor: completed ? 'rgba(34,197,94,0.2)' : 'transparent',
+          borderColor: isGreen ? '#22c55e' : (isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.2)'),
+          backgroundColor: isGreen ? 'rgba(34,197,94,0.2)' : 'transparent',
           alignItems: 'center',
           justifyContent: 'center',
         }}>
-          {completed && <Ionicons name="checkmark" size={11} color="#22c55e" />}
+          {isGreen && <Ionicons name="checkmark" size={11} color="#22c55e" />}
         </View>
         <Text style={{
           flex: 1, fontSize: 15,
-          color: completed ? 'rgba(34,197,94,0.7)' : (isDark ? '#f9fafb' : '#111827'),
+          color: isGreen ? 'rgba(34,197,94,0.85)' : (isDark ? '#f9fafb' : '#111827'),
           textDecorationLine: completed ? 'line-through' : 'none',
         }}>
           {task.title}
