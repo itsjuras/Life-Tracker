@@ -146,7 +146,7 @@ export default function SettingsScreen({ onEditTracking }: Props) {
           <TouchableOpacity onPress={handleAvatarPress} disabled={uploadingAvatar} className="mb-2">
             {uploadingAvatar ? (
               <View
-                style={{ width: 120, height: 120, borderRadius: 60, backgroundColor: isDark ? '#1f2937' : '#f3f4f6', alignItems: 'center', justifyContent: 'center' }}
+                style={{ width: 120, height: 120, borderRadius: 60, backgroundColor: isDark ? '#1a1a1a' : '#f3f4f6', alignItems: 'center', justifyContent: 'center' }}
               >
                 <ActivityIndicator color="#9ca3af" />
               </View>
@@ -235,30 +235,30 @@ export default function SettingsScreen({ onEditTracking }: Props) {
           ) : (
             <View className="px-5 py-4" style={{ gap: 12 }}>
               <View
-                style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? '#1f2937' : '#f3f4f6', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12 }}
+                style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? '#1a1a1a' : '#f3f4f6', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12 }}
               >
                 <TextInput
                   value={newPassword}
                   onChangeText={setNewPassword}
-                  placeholder="New password"
+                  placeholder="NEW PASSWORD"
                   placeholderTextColor="#9ca3af"
                   secureTextEntry={!showNewPw}
-                  style={{ flex: 1, fontSize: 11, color: isDark ? '#f9fafb' : '#111827' }}
+                  style={{ flex: 1, fontSize: 11, color: isDark ? '#f9fafb' : '#111827', letterSpacing: 1.5 }}
                 />
                 <TouchableOpacity onPress={() => setShowNewPw(v => !v)} hitSlop={8}>
                   <Ionicons name={showNewPw ? 'eye-off-outline' : 'eye-outline'} size={20} color="#9ca3af" />
                 </TouchableOpacity>
               </View>
               <View
-                style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? '#1f2937' : '#f3f4f6', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12 }}
+                style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? '#1a1a1a' : '#f3f4f6', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12 }}
               >
                 <TextInput
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
-                  placeholder="Confirm new password"
+                  placeholder="CONFIRM NEW PASSWORD"
                   placeholderTextColor="#9ca3af"
                   secureTextEntry={!showConfirmPw}
-                  style={{ flex: 1, fontSize: 11, color: isDark ? '#f9fafb' : '#111827' }}
+                  style={{ flex: 1, fontSize: 11, color: isDark ? '#f9fafb' : '#111827', letterSpacing: 1.5 }}
                 />
                 <TouchableOpacity onPress={() => setShowConfirmPw(v => !v)} hitSlop={8}>
                   <Ionicons name={showConfirmPw ? 'eye-off-outline' : 'eye-outline'} size={20} color="#9ca3af" />
