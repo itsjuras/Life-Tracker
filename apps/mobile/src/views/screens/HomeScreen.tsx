@@ -622,11 +622,11 @@ function StatCard({
 
 // ── ReflectionPage — full-screen solo entry ───────────────────────────────────
 function ReflectionPage({
-  isDark, today, onSaved, onDismiss,
+  isDark, today, initialText, onSaved, onDismiss,
 }: {
-  isDark: boolean; today: string; onSaved: () => void; onDismiss: () => void;
+  isDark: boolean; today: string; initialText?: string; onSaved: (text: string) => void; onDismiss: () => void;
 }) {
-  const [text, setText] = useState('');
+  const [text, setText] = useState(initialText ?? '');
   const [saving, setSaving] = useState(false);
 
   const wordCount = text.trim() ? text.trim().split(/\s+/).length : 0;
@@ -644,7 +644,7 @@ function ReflectionPage({
     setSaving(true);
     try {
       await saveReflection(today, trimmed);
-      onSaved();
+      onSaved(trimmed);
     } catch { /* silent */ } finally { setSaving(false); }
   };
 
@@ -717,7 +717,9 @@ export default function HomeScreen() {
   const [modalOpen, setModalOpen] = useState<'habit' | 'task' | 'stat' | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [hasReflection, setHasReflection] = useState(false);
+  const [reflectionText, setReflectionText] = useState('');
   const [reflectionOpen, setReflectionOpen] = useState(false);
+  const [reflectionEditOpen, setReflectionEditOpen] = useState(false);
   const [reflectionDismissed, setReflectionDismissed] = useState(false);
 
   const HABIT_GAP = 12;
@@ -750,6 +752,7 @@ export default function HomeScreen() {
       se.forEach(en => valueMap.set(en.statDefinitionId, en.value));
       setStatEntryValues(valueMap);
       setHasReflection(!!reflection);
+      setReflectionText(reflection?.text ?? '');
     } catch { /* silent */ } finally {
       setLoading(false);
     }
@@ -855,12 +858,13 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-white" style={isDark ? { backgroundColor: '#000000' } : undefined}>
-      {showReflectionCard ? (
+      {(showReflectionCard || reflectionEditOpen) ? (
         <ReflectionPage
           isDark={isDark}
           today={today}
-          onSaved={() => { setHasReflection(true); setReflectionOpen(false); setReflectionDismissed(false); }}
-          onDismiss={() => { setReflectionOpen(false); setReflectionDismissed(true); }}
+          initialText={reflectionEditOpen ? reflectionText : undefined}
+          onSaved={(text) => { setHasReflection(true); setReflectionText(text); setReflectionOpen(false); setReflectionDismissed(false); setReflectionEditOpen(false); }}
+          onDismiss={() => { setReflectionOpen(false); setReflectionDismissed(true); setReflectionEditOpen(false); }}
         />
       ) : (
       <KeyboardAvoidingView
@@ -1008,6 +1012,31 @@ export default function HomeScreen() {
                         <Text style={plusTextStyle}>+</Text>
                       </TouchableOpacity>
                     )}
+                  </View>
+                </View>
+              )}
+              {/* ── REFLECTION (edit mode) ── */}
+              {editMode && hasReflection && (
+                <View>
+                  <SectionHeader label="Reflection" />
+                  <View style={{ paddingHorizontal: 16 }}>
+                    <TouchableOpacity onPress={() => setReflectionEditOpen(true)} activeOpacity={0.7}>
+                      <View style={{
+                        ...glassCard(isDark),
+                        backgroundColor: 'rgba(34,197,94,0.07)',
+                        borderColor: 'rgba(34,197,94,0.25)',
+                        paddingVertical: 14,
+                        paddingHorizontal: 18,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                      }}>
+                        <Text style={{ flex: 1, fontSize: 11, fontWeight: '600', color: 'rgba(34,197,94,0.7)', textTransform: 'uppercase', letterSpacing: 1.5 }}>
+                          {reflectionText}
+                        </Text>
+                        <Ionicons name="create-outline" size={14} color="rgba(34,197,94,0.6)" style={{ marginLeft: 10 }} />
+                      </View>
+                    </TouchableOpacity>
                   </View>
                 </View>
               )}
