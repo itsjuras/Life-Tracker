@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, useWindowDimensions, PanResponder } from 'react-native';
+import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, useWindowDimensions, PanResponder, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { VictoryArea, VictoryChart, VictoryAxis } from 'victory-native';
@@ -19,6 +19,15 @@ const MONTH_NAMES = [
   'July', 'August', 'September', 'October', 'November', 'December',
 ];
 const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+const RANGE_OPTIONS = [
+  { key: 'week',   label: '1W', days: 7   },
+  { key: 'month',  label: '1M', days: 30  },
+  { key: '3month', label: '3M', days: 90  },
+  { key: '6month', label: '6M', days: 180 },
+  { key: 'year',   label: '1Y', days: 365 },
+] as const;
+type RangeKey = typeof RANGE_OPTIONS[number]['key'];
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -81,6 +90,96 @@ function SectionHeader({ label }: { label: string }) {
   );
 }
 
+// ── Animated calendar cell ────────────────────────────────────────────────
+function CalendarCell({
+  date, cellSize, isToday, ratio, isDark,
+}: {
+  date: string | null; cellSize: number; isToday: boolean;
+  ratio: number | null; isDark: boolean;
+}) {
+  const swipeAnim = useRef(new Animated.Value(0)).current;
+  const textOpacity = useRef(new Animated.Value(0)).current;
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handlePress = () => {
+    // Glare sweep
+    swipeAnim.setValue(0);
+    Animated.timing(swipeAnim, { toValue: 1, duration: 600, useNativeDriver: true }).start();
+
+    // Percentage: fade in → hold 3 s → fade out
+    if (timerRef.current) clearTimeout(timerRef.current);
+    Animated.timing(textOpacity, { toValue: 1, duration: 250, useNativeDriver: true }).start();
+    timerRef.current = setTimeout(() => {
+      Animated.timing(textOpacity, { toValue: 0, duration: 400, useNativeDriver: true }).start();
+    }, 3000);
+  };
+
+  // Padding cells: invisible placeholder, no interaction
+  if (!date) {
+    return (
+      <View style={{ width: cellSize, height: cellSize, borderWidth: 2, borderColor: 'transparent', borderRadius: 4 }} />
+    );
+  }
+
+  const glareX = swipeAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-cellSize * 0.8, cellSize * 1.4],
+  });
+
+  const percentText = ratio !== null ? `${Math.round(ratio * 100)}%` : null;
+
+  return (
+    <TouchableOpacity onPress={handlePress} activeOpacity={1}>
+      <View
+        style={{
+          width: cellSize,
+          height: cellSize,
+          backgroundColor: habitColor(ratio, isDark),
+          borderRadius: 4,
+          borderWidth: 2,
+          borderColor: isToday ? '#22c55e' : 'transparent',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Diagonal glare sweep */}
+        <Animated.View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            top: -cellSize,
+            width: cellSize * 0.45,
+            height: cellSize * 3,
+            backgroundColor: 'rgba(255,255,255,0.5)',
+            transform: [{ translateX: glareX }, { rotate: '-25deg' }],
+          }}
+        />
+
+        {/* Percentage label */}
+        {percentText !== null && (
+          <Animated.View
+            pointerEvents="none"
+            style={{
+              position: 'absolute',
+              top: 0, left: 0, right: 0, bottom: 0,
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: textOpacity,
+            }}
+          >
+            <Text style={{
+              fontSize: Math.max(7, Math.floor(cellSize * 0.22)),
+              color: '#fff',
+              fontWeight: '700',
+            }}>
+              {percentText}
+            </Text>
+          </Animated.View>
+        )}
+      </View>
+    </TouchableOpacity>
+  );
+}
+
 // ── Month calendar grid (no title — handled by nav header) ────────────────
 function MonthCalendar({
   year, month, today, ratioByDate, isDark, mutedColor, cellSize,
@@ -108,31 +207,176 @@ function MonthCalendar({
           <View key={ri} style={{ flexDirection: 'row', gap: CELL_GAP }}>
             {row.map((date, ci) => {
               const isToday = date === today;
-              const isFuture = !date || date > today;
+              const isFuture = date ? date > today : true;
               const ratio = (!date || isFuture) ? null : (ratioByDate[date] ?? null);
-
-              // Every cell — including empty padding — uses the exact same dimensions.
-              // borderWidth is always 2 so the box model never changes size;
-              // we just toggle the color between visible and transparent.
               return (
-                <View
+                <CalendarCell
                   key={ci}
-                  style={{
-                    width: cellSize,
-                    height: cellSize,
-                    backgroundColor: !date
-                      ? 'transparent'
-                      : habitColor(ratio, isDark),
-                    borderRadius: 4,
-                    borderWidth: 2,
-                    borderColor: isToday ? '#22c55e' : 'transparent',
-                  }}
+                  date={date}
+                  cellSize={cellSize}
+                  isToday={isToday}
+                  ratio={ratio}
+                  isDark={isDark}
                 />
               );
             })}
           </View>
         ))}
       </View>
+    </View>
+  );
+}
+
+// ── Stat chart with range selector and swipe navigation ───────────────────
+function StatChart({
+  stat, allEntries, today,
+}: {
+  stat: StatDefinition; allEntries: StatEntry[]; today: string;
+}) {
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const mutedColor = '#9ca3af';
+  const axisColor = isDark ? '#1f2937' : '#e5e7eb';
+  const chartLineColor = '#22c55e';
+  const chartFillColor = isDark ? '#166634' : '#bbf7d0';
+  const { width: screenWidth } = useWindowDimensions();
+  const chartWidth = screenWidth;
+
+  const [rangeKey, setRangeKey] = useState<RangeKey>('month');
+  const [offset, setOffset] = useState(0);
+
+  const rangeDays = RANGE_OPTIONS.find(r => r.key === rangeKey)!.days;
+
+  // Compute display window
+  const endDate = new Date(today + 'T00:00:00');
+  endDate.setDate(endDate.getDate() - offset * rangeDays);
+  const startDate = new Date(endDate);
+  startDate.setDate(startDate.getDate() - rangeDays + 1);
+  const endStr = endDate.toISOString().split('T')[0];
+  const startStr = startDate.toISOString().split('T')[0];
+
+  const windowEntries = allEntries.filter(e => e.date >= startStr && e.date <= endStr);
+
+  // Zero-fill every past day in the window so the line returns to 0 on missing days.
+  // The average only counts days that have actual entries.
+  const entryByDate = new Map(windowEntries.map(e => [e.date, e.value]));
+  const chartData: { x: number; y: number }[] = [];
+  const cur = new Date(startStr + 'T12:00:00');
+  const stop = new Date((endStr < today ? endStr : today) + 'T12:00:00');
+  while (cur <= stop) {
+    const ds = `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}-${String(cur.getDate()).padStart(2, '0')}`;
+    chartData.push({ x: cur.getTime(), y: entryByDate.get(ds) ?? 0 });
+    cur.setDate(cur.getDate() + 1);
+  }
+
+  const average = windowEntries.length > 0
+    ? windowEntries.reduce((sum, e) => sum + e.value, 0) / windowEntries.length
+    : null;
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gs) =>
+        Math.abs(gs.dx) > 10 && Math.abs(gs.dx) > Math.abs(gs.dy),
+      onPanResponderRelease: (_, gs) => {
+        if (gs.dx > 50) {
+          setOffset(o => o + 1);          // swipe right = go back in time
+        } else if (gs.dx < -50) {
+          setOffset(o => Math.max(o - 1, 0)); // swipe left = forward (cap at today)
+        }
+      },
+    })
+  ).current;
+
+  return (
+    <View className="border-b border-gray-100 dark:border-gray-800 pb-2">
+      {/* Stat label — same style as section header */}
+      <Text className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest px-5 pt-4 pb-1">
+        {stat.label}
+      </Text>
+
+      {/* Range tabs */}
+      <View style={{ flexDirection: 'row', paddingHorizontal: 20, gap: 6, marginBottom: 4, justifyContent: 'center' }}>
+        {RANGE_OPTIONS.map(opt => (
+          <TouchableOpacity
+            key={opt.key}
+            onPress={() => { setRangeKey(opt.key); setOffset(0); }}
+            style={{
+              paddingHorizontal: 9,
+              paddingVertical: 3,
+              borderRadius: 12,
+              backgroundColor: rangeKey === opt.key
+                ? '#22c55e'
+                : (isDark ? '#1f2937' : '#f3f4f6'),
+            }}
+          >
+            <Text style={{
+              fontSize: 11, fontWeight: '600',
+              color: rangeKey === opt.key ? '#fff' : mutedColor,
+            }}>
+              {opt.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* Chart */}
+      {chartData.length < 2 ? (
+        <View className="px-5 pb-3">
+          <Text className="text-xs text-gray-400 dark:text-gray-500">
+            {allEntries.length === 0 ? 'No data yet.' : 'No data in this period.'}
+          </Text>
+        </View>
+      ) : (
+        <View {...panResponder.panHandlers}>
+          <VictoryChart
+            width={chartWidth}
+            height={130}
+            padding={{ top: 8, bottom: 28, left: 40, right: 16 }}
+            domainPadding={{ x: [8, 8], y: [10, 10] }}
+            style={{ parent: { backgroundColor: 'transparent' } }}
+          >
+            <VictoryAxis
+              style={{
+                axis: { stroke: axisColor },
+                ticks: { stroke: 'transparent' },
+                tickLabels: { fontSize: 9, fill: mutedColor, padding: 4 },
+                grid: { stroke: 'transparent' },
+              }}
+              tickCount={4}
+              tickFormat={(t: number) => formatAxisDate(t)}
+            />
+            <VictoryAxis
+              dependentAxis
+              style={{
+                axis: { stroke: 'transparent' },
+                ticks: { stroke: 'transparent' },
+                tickLabels: { fontSize: 9, fill: mutedColor, padding: 4 },
+                grid: { stroke: axisColor, strokeDasharray: '3,3' },
+              }}
+              tickCount={3}
+            />
+            <VictoryArea
+              data={chartData}
+              interpolation="monotoneX"
+              style={{
+                data: {
+                  stroke: chartLineColor,
+                  strokeWidth: 1.5,
+                  fill: chartFillColor,
+                  fillOpacity: 0.25,
+                },
+              }}
+            />
+          </VictoryChart>
+        </View>
+      )}
+
+      {/* Average */}
+      {average !== null && (
+        <Text style={{ fontSize: 11, color: mutedColor, textAlign: 'center', paddingBottom: 8 }}>
+          avg {Number.isInteger(average) ? average : average.toFixed(1)}{stat.unit ? ` ${stat.unit}` : ''}
+        </Text>
+      )}
     </View>
   );
 }
@@ -145,9 +389,6 @@ export default function ProgressScreen() {
   const isDark = colorScheme === 'dark';
   const iconColor = isDark ? '#ffffff' : '#111111';
   const mutedColor = '#9ca3af';
-  const axisColor = isDark ? '#1f2937' : '#e5e7eb';
-  const chartLineColor = '#22c55e';
-  const chartFillColor = isDark ? '#166634' : '#bbf7d0';
 
   const [loading, setLoading] = useState(true);
   const [monthOffset, setMonthOffset] = useState(0); // 0 = current month
@@ -158,11 +399,10 @@ export default function ProgressScreen() {
 
   // Floor to an integer so every cell is identically sized with no sub-pixel rounding
   const cellSize = Math.floor((screenWidth - CELL_GAP * 6 - CALENDAR_PADDING * 2) / 7);
-  const chartWidth = screenWidth - 40;
   const calFrom = calendarRangeStart(today);
   const statFrom = (() => {
     const d = new Date(today + 'T00:00:00');
-    d.setDate(d.getDate() - 29);
+    d.setDate(d.getDate() - 364); // 365 days inclusive; covers the full 1Y chart range
     return d.toISOString().split('T')[0];
   })();
 
@@ -294,76 +534,14 @@ export default function ProgressScreen() {
           <>
             <View className="border-t border-gray-100 dark:border-gray-800 mt-6" />
             <SectionHeader label="Stats" />
-            {stats.map(stat => {
-              const entries = statEntriesMap[stat.id] ?? [];
-              const chartData = entries.map(e => ({
-                x: new Date(e.date + 'T12:00:00').getTime(),
-                y: e.value,
-              }));
-              const latest = entries[entries.length - 1];
-
-              return (
-                <View key={stat.id} className="border-b border-gray-100 dark:border-gray-800 pb-2">
-                  <View className="flex-row items-baseline justify-between px-5 pt-2 pb-1">
-                    <Text className="text-sm font-medium text-gray-900 dark:text-white">
-                      {stat.label}
-                    </Text>
-                    <Text className="text-xs text-gray-400 dark:text-gray-500">
-                      {latest ? `${latest.value}${stat.unit ? ` ${stat.unit}` : ''}` : '—'}
-                    </Text>
-                  </View>
-
-                  {chartData.length < 2 ? (
-                    <View className="px-5 pb-3">
-                      <Text className="text-xs text-gray-400 dark:text-gray-500">
-                        {chartData.length === 0 ? 'No data yet.' : 'Add more entries to see the trend.'}
-                      </Text>
-                    </View>
-                  ) : (
-                    <VictoryChart
-                      width={chartWidth}
-                      height={130}
-                      padding={{ top: 8, bottom: 28, left: 40, right: 16 }}
-                      domainPadding={{ x: [8, 8], y: [10, 10] }}
-                      style={{ parent: { backgroundColor: 'transparent' } }}
-                    >
-                      <VictoryAxis
-                        style={{
-                          axis: { stroke: axisColor },
-                          ticks: { stroke: 'transparent' },
-                          tickLabels: { fontSize: 9, fill: mutedColor, padding: 4 },
-                          grid: { stroke: 'transparent' },
-                        }}
-                        tickCount={4}
-                        tickFormat={(t: number) => formatAxisDate(t)}
-                      />
-                      <VictoryAxis
-                        dependentAxis
-                        style={{
-                          axis: { stroke: 'transparent' },
-                          ticks: { stroke: 'transparent' },
-                          tickLabels: { fontSize: 9, fill: mutedColor, padding: 4 },
-                          grid: { stroke: axisColor, strokeDasharray: '3,3' },
-                        }}
-                        tickCount={3}
-                      />
-                      <VictoryArea
-                        data={chartData}
-                        interpolation="monotoneX"
-                        style={{
-                          data: {
-                            stroke: chartLineColor,
-                            strokeWidth: 1.5,
-                            fill: chartFillColor,
-                            fillOpacity: 0.25,
-                          },
-                        }}
-                      />
-                    </VictoryChart>
-                  )}
-                </View>
-              );
-            })}
+            {stats.map(stat => (
+              <StatChart
+                key={stat.id}
+                stat={stat}
+                allEntries={statEntriesMap[stat.id] ?? []}
+                today={today}
+              />
+            ))}
           </>
         )}
 
