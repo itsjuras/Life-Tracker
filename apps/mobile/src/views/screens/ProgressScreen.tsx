@@ -33,11 +33,7 @@ type RangeKey = typeof RANGE_OPTIONS[number]['key'];
 
 function habitColor(ratio: number | null, isDark: boolean): string {
   if (ratio === null || ratio === 0) return isDark ? '#1f2937' : '#e5e7eb';
-  if (ratio <= 0.25) return isDark ? '#14532d' : '#bbf7d0';
-  if (ratio <= 0.50) return isDark ? '#166534' : '#4ade80';
-  if (ratio <= 0.75) return isDark ? '#15803d' : '#22c55e';
-  if (ratio <  1.00) return isDark ? '#16a34a' : '#16a34a';
-  return isDark ? '#22c55e' : '#15803d';
+  return `rgba(34, 197, 94, ${ratio.toFixed(2)})`;
 }
 
 
@@ -92,9 +88,9 @@ function SectionHeader({ label }: { label: string }) {
 
 // ── Animated calendar cell ────────────────────────────────────────────────
 function CalendarCell({
-  date, cellSize, isToday, ratio, isDark,
+  date, cellSize, ratio, isDark,
 }: {
-  date: string | null; cellSize: number; isToday: boolean;
+  date: string | null; cellSize: number;
   ratio: number | null; isDark: boolean;
 }) {
   const swipeAnim = useRef(new Animated.Value(0)).current;
@@ -117,7 +113,7 @@ function CalendarCell({
   // Padding cells: invisible placeholder, no interaction
   if (!date) {
     return (
-      <View style={{ width: cellSize, height: cellSize, borderWidth: 2, borderColor: 'transparent', borderRadius: 4 }} />
+      <View style={{ width: cellSize, height: cellSize, borderRadius: 4 }} />
     );
   }
 
@@ -136,8 +132,6 @@ function CalendarCell({
           height: cellSize,
           backgroundColor: habitColor(ratio, isDark),
           borderRadius: 4,
-          borderWidth: 2,
-          borderColor: isToday ? '#22c55e' : 'transparent',
           overflow: 'hidden',
         }}
       >
@@ -196,7 +190,7 @@ function MonthCalendar({
       <View style={{ flexDirection: 'row', gap: CELL_GAP, marginBottom: CELL_GAP }}>
         {DAY_HEADERS.map(d => (
           <View key={d} style={{ width: cellSize, alignItems: 'center', paddingVertical: 3 }}>
-            <Text style={{ fontSize: 10, color: mutedColor }}>{d}</Text>
+            <Text style={{ fontSize: 9, color: mutedColor, textTransform: 'uppercase', letterSpacing: 0.8 }}>{d}</Text>
           </View>
         ))}
       </View>
@@ -206,7 +200,6 @@ function MonthCalendar({
         {rows.map((row, ri) => (
           <View key={ri} style={{ flexDirection: 'row', gap: CELL_GAP }}>
             {row.map((date, ci) => {
-              const isToday = date === today;
               const isFuture = date ? date > today : true;
               const ratio = (!date || isFuture) ? null : (ratioByDate[date] ?? null);
               return (
@@ -214,7 +207,6 @@ function MonthCalendar({
                   key={ci}
                   date={date}
                   cellSize={cellSize}
-                  isToday={isToday}
                   ratio={ratio}
                   isDark={isDark}
                 />
@@ -310,7 +302,7 @@ function StatChart({
             }}
           >
             <Text style={{
-              fontSize: 11, fontWeight: '600',
+              fontSize: 11, fontWeight: '600', letterSpacing: 1.5,
               color: rangeKey === opt.key ? '#fff' : mutedColor,
             }}>
               {opt.label}
@@ -322,7 +314,7 @@ function StatChart({
       {/* Chart */}
       {chartData.length < 2 ? (
         <View className="px-5 pb-3">
-          <Text className="text-xs text-gray-400 dark:text-gray-500">
+          <Text style={{ fontSize: 11, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 1.5 }}>
             {allEntries.length === 0 ? 'No data yet.' : 'No data in this period.'}
           </Text>
         </View>
@@ -373,7 +365,7 @@ function StatChart({
 
       {/* Average */}
       {average !== null && (
-        <Text style={{ fontSize: 11, color: mutedColor, textAlign: 'center', paddingBottom: 8 }}>
+        <Text style={{ fontSize: 11, color: mutedColor, textAlign: 'center', paddingBottom: 8, textTransform: 'uppercase', letterSpacing: 1.5 }}>
           avg {Number.isInteger(average) ? average : average.toFixed(1)}{stat.unit ? ` ${stat.unit}` : ''}
         </Text>
       )}
@@ -486,8 +478,8 @@ export default function ProgressScreen() {
         <SectionHeader label="Habits" />
 
         {habits.length === 0 ? (
-          <Text className="text-sm text-gray-400 dark:text-gray-500 px-5 pb-4">
-            No habits set up yet.
+          <Text style={{ fontSize: 11, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 1.5, paddingHorizontal: 20, paddingBottom: 16 }}>
+            No habits yet.
           </Text>
         ) : (
           <View {...calendarPanResponder.panHandlers}>
@@ -497,7 +489,7 @@ export default function ProgressScreen() {
                 <Ionicons name="chevron-back" size={20} color={iconColor} />
               </TouchableOpacity>
 
-              <Text className="text-sm font-medium text-gray-900 dark:text-white">
+              <Text style={{ fontSize: 11, fontWeight: '600', color: isDark ? '#f9fafb' : '#111827', textTransform: 'uppercase', letterSpacing: 1.5 }}>
                 {MONTH_NAMES[displayMonth.month]} {displayMonth.year}
               </Text>
 
