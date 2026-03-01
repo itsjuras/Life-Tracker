@@ -23,42 +23,7 @@ import { fetchTasksForDate, createTask, deleteTask } from '../../controllers/Tas
 import { Habit } from '../../models/Habit';
 import { StatDefinition } from '../../models/Stat';
 import { Task } from '../../models/Task';
-import { ICON_KEYS, IconKey } from '../../constants/icons';
-
-// Map icon keys to Ionicons names
-const ICON_MAP: Record<string, keyof typeof Ionicons.glyphMap> = {
-  'sun': 'sunny-outline',
-  'moon': 'moon-outline',
-  'droplet': 'water-outline',
-  'flame': 'flame-outline',
-  'heart': 'heart-outline',
-  'star': 'star-outline',
-  'zap': 'flash-outline',
-  'book': 'book-outline',
-  'dumbbell': 'barbell-outline',
-  'coffee': 'cafe-outline',
-  'apple': 'nutrition-outline',
-  'bicycle': 'bicycle-outline',
-  'music': 'musical-notes-outline',
-  'pen': 'pencil-outline',
-  'pill': 'medkit-outline',
-  'phone-off': 'phone-portrait-outline',
-  'leaf': 'leaf-outline',
-  'smile': 'happy-outline',
-  'dollar-sign': 'cash-outline',
-  'clock': 'time-outline',
-  'code': 'code-slash-outline',
-  'run': 'body-outline',
-  'walk': 'walk-outline',
-  'water': 'water-outline',
-  'brain': 'bulb-outline',
-  'eye': 'eye-outline',
-  'utensils': 'restaurant-outline',
-  'bed': 'bed-outline',
-  'briefcase': 'briefcase-outline',
-  'camera': 'camera-outline',
-  'headphones': 'headset-outline',
-};
+import { ICON_KEYS, ICON_MAP, IconKey } from '../../constants/icons';
 
 function toStatKey(label: string): string {
   return label.toLowerCase().trim().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
