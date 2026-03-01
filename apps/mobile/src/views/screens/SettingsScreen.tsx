@@ -162,45 +162,38 @@ export default function SettingsScreen({ onEditTracking }: Props) {
         <View className={`border-t ${divider}`}>
 
           {/* Username */}
-          <View className={`px-5 py-4 ${divider}`}>
-            {editingUsername ? (
-              <View style={{ gap: 10 }}>
-                <TextInput
-                  value={usernameInput}
-                  onChangeText={setUsernameInput}
-                  autoFocus
-                  returnKeyType="done"
-                  onSubmitEditing={handleUsernameSave}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  style={{ fontSize: 11, color: isDark ? '#f9fafb' : '#111827' }}
-                />
-                <View className="flex-row" style={{ gap: 20 }}>
-                  <TouchableOpacity onPress={() => { setEditingUsername(false); setUsernameInput(profile?.username ?? ''); }}>
-                    <Text style={muted}>Cancel</Text>
+          <View className={`px-5 py-4 flex-row items-center justify-between ${divider}`}>
+            <Text style={label()}>Username</Text>
+            <View className="flex-row items-center" style={{ gap: 8 }}>
+              {editingUsername ? (
+                <>
+                  <TextInput
+                    value={usernameInput}
+                    onChangeText={setUsernameInput}
+                    autoFocus
+                    returnKeyType="done"
+                    onSubmitEditing={handleUsernameSave}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    style={{ fontSize: 14, color: '#9ca3af', textAlign: 'right', minWidth: 80 }}
+                  />
+                  <TouchableOpacity onPress={() => { setEditingUsername(false); setUsernameInput(profile?.username ?? ''); }} hitSlop={8}>
+                    <Ionicons name="close-outline" size={16} color="#9ca3af" />
                   </TouchableOpacity>
-                  <TouchableOpacity onPress={handleUsernameSave} disabled={savingUsername}>
+                  <TouchableOpacity onPress={handleUsernameSave} disabled={savingUsername} hitSlop={8}>
                     {savingUsername
                       ? <ActivityIndicator size="small" color="#9ca3af" />
-                      : <Text style={label()}>Save</Text>
+                      : <Ionicons name="checkmark-outline" size={16} color="#9ca3af" />
                     }
                   </TouchableOpacity>
-                </View>
-              </View>
-            ) : (
-              <TouchableOpacity
-                className="flex-row items-center justify-between"
-                onPress={() => setEditingUsername(true)}
-              >
-                <Text style={label()}>Username</Text>
-                <View className="flex-row items-center" style={{ gap: 8 }}>
-                  <Text style={muted}>
-                    {profile?.username ?? '—'}
-                  </Text>
+                </>
+              ) : (
+                <TouchableOpacity className="flex-row items-center" style={{ gap: 8 }} onPress={() => setEditingUsername(true)}>
+                  <Text style={muted}>{profile?.username ?? '—'}</Text>
                   <Ionicons name="create-outline" size={14} color="#9ca3af" />
-                </View>
-              </TouchableOpacity>
-            )}
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
 
           {/* Email (read-only) */}
