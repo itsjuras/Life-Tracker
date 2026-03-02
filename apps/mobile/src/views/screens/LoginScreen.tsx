@@ -11,14 +11,18 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useColorScheme } from 'nativewind';
 import { signIn, signUp } from '../../controllers/AuthController';
 
 type Mode = 'signin' | 'signup';
 
 export default function LoginScreen() {
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
+
   const [mode, setMode] = useState<Mode>('signin');
-  const [identifier, setIdentifier] = useState(''); // email or username (sign in)
-  const [email, setEmail] = useState('');            // email (sign up)
+  const [identifier, setIdentifier] = useState('');
+  const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -27,6 +31,30 @@ export default function LoginScreen() {
   const [info, setInfo] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+
+  const labelColor = isDark ? '#f9fafb' : '#111827';
+  const mutedColor = '#9ca3af';
+  const inputBg = isDark ? '#1a1a1a' : '#f3f4f6';
+  const dividerColor = isDark ? '#1f2937' : '#f3f4f6';
+
+  const labelStyle = {
+    fontSize: 11, fontWeight: '600' as const,
+    color: labelColor,
+    textTransform: 'uppercase' as const,
+    letterSpacing: 1.5,
+  };
+  const mutedStyle = {
+    fontSize: 11, color: mutedColor,
+    textTransform: 'uppercase' as const,
+    letterSpacing: 1.5,
+  };
+  const inputTextStyle = {
+    flex: 1,
+    fontSize: 11, fontWeight: '600' as const,
+    color: labelColor,
+    textTransform: 'uppercase' as const,
+    letterSpacing: 1.5,
+  };
 
   function switchMode(next: Mode) {
     setMode(next);
@@ -39,28 +67,13 @@ export default function LoginScreen() {
     setInfo(null);
 
     if (mode === 'signin') {
-      if (!identifier.trim() || !password) {
-        setError('Please fill in all fields.');
-        return;
-      }
+      if (!identifier.trim() || !password) { setError('Please fill in all fields.'); return; }
     } else {
-      if (!email.trim() || !username.trim() || !password) {
-        setError('Please fill in all fields.');
-        return;
-      }
-      if (!/^[a-zA-Z0-9_]+$/.test(username.trim())) {
-        setError('Username can only contain letters, numbers, and underscores.');
-        return;
-      }
-      if (password !== confirm) {
-        setError('Passwords do not match.');
-        return;
-      }
+      if (!email.trim() || !username.trim() || !password) { setError('Please fill in all fields.'); return; }
+      if (!/^[a-zA-Z0-9_]+$/.test(username.trim())) { setError('Username can only contain letters, numbers, and underscores.'); return; }
+      if (password !== confirm) { setError('Passwords do not match.'); return; }
     }
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters.');
-      return;
-    }
+    if (password.length < 6) { setError('Password must be at least 6 characters.'); return; }
 
     setLoading(true);
     try {
@@ -79,113 +92,105 @@ export default function LoginScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-white dark:bg-gray-950">
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        className="flex-1"
-      >
+    <SafeAreaView className="flex-1 bg-white" style={isDark ? { backgroundColor: '#000000' } : undefined}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView
           contentContainerStyle={{ flexGrow: 1 }}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <View className="flex-1 px-8 pt-16 pb-10">
+          <View style={{ flex: 1, paddingHorizontal: 32, paddingTop: 64, paddingBottom: 40 }}>
 
             {/* Header */}
-            <View className="mb-12">
-              <Text className="text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">
+            <View style={{ marginBottom: 48 }}>
+              <Text style={{ fontSize: 22, fontWeight: '600', color: labelColor, textTransform: 'uppercase', letterSpacing: 6 }}>
                 Life Tracker
               </Text>
-              <Text className="text-sm text-gray-400 dark:text-gray-500 mt-1">
+              <Text style={{ ...mutedStyle, marginTop: 6 }}>
                 Track your daily life, simply.
               </Text>
             </View>
 
             {/* Mode toggle */}
-            <View className="flex-row mb-8">
+            <View style={{ flexDirection: 'row', marginBottom: 16 }}>
               {(['signin', 'signup'] as Mode[]).map((m) => (
-                <TouchableOpacity
-                  key={m}
-                  onPress={() => switchMode(m)}
-                  className="mr-6 pb-2"
-                >
-                  <Text
-                    className={`text-sm font-medium ${
-                      mode === m ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-600'
-                    }`}
-                  >
+                <TouchableOpacity key={m} onPress={() => switchMode(m)} style={{ marginRight: 24, paddingBottom: 6 }}>
+                  <Text style={{ ...labelStyle, color: mode === m ? labelColor : mutedColor }}>
                     {m === 'signin' ? 'Sign In' : 'Create Account'}
                   </Text>
                   {mode === m && (
-                    <View className="h-px bg-gray-900 dark:bg-white mt-1" />
+                    <View style={{ height: 1.5, backgroundColor: labelColor, marginTop: 4 }} />
                   )}
                 </TouchableOpacity>
               ))}
             </View>
 
             {/* Inputs */}
-            <View className="border-t border-gray-100 dark:border-gray-800 mb-8">
+            <View style={{ marginBottom: 32, gap: 10 }}>
               {mode === 'signin' ? (
-                <TextInput
-                  value={identifier}
-                  onChangeText={setIdentifier}
-                  placeholder="Email or Username"
-                  placeholderTextColor="#9ca3af"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  className="text-gray-900 dark:text-white text-base border-b border-gray-100 dark:border-gray-800"
-                  style={{ paddingVertical: 16 }}
-                />
+                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: inputBg, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14 }}>
+                  <TextInput
+                    value={identifier}
+                    onChangeText={setIdentifier}
+                    placeholder="EMAIL OR USERNAME"
+                    placeholderTextColor={mutedColor}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    style={inputTextStyle}
+                  />
+                </View>
               ) : (
                 <>
-                  <TextInput
-                    value={email}
-                    onChangeText={setEmail}
-                    placeholder="Email"
-                    placeholderTextColor="#9ca3af"
-                    autoCapitalize="none"
-                    keyboardType="email-address"
-                    autoCorrect={false}
-                    className="text-gray-900 dark:text-white text-base border-b border-gray-100 dark:border-gray-800"
-                    style={{ paddingVertical: 16 }}
-                  />
-                  <TextInput
-                    value={username}
-                    onChangeText={setUsername}
-                    placeholder="Username"
-                    placeholderTextColor="#9ca3af"
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    className="text-gray-900 dark:text-white text-base border-b border-gray-100 dark:border-gray-800"
-                    style={{ paddingVertical: 16 }}
-                  />
+                  <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: inputBg, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14 }}>
+                    <TextInput
+                      value={email}
+                      onChangeText={setEmail}
+                      placeholder="EMAIL"
+                      placeholderTextColor={mutedColor}
+                      autoCapitalize="none"
+                      keyboardType="email-address"
+                      autoCorrect={false}
+                      style={inputTextStyle}
+                    />
+                  </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: inputBg, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14 }}>
+                    <TextInput
+                      value={username}
+                      onChangeText={setUsername}
+                      placeholder="USERNAME"
+                      placeholderTextColor={mutedColor}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      style={inputTextStyle}
+                    />
+                  </View>
                 </>
               )}
-              <View className="flex-row items-center border-b border-gray-100 dark:border-gray-800" style={{ paddingVertical: 16 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: inputBg, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14 }}>
                 <TextInput
                   value={password}
                   onChangeText={setPassword}
-                  placeholder="Password"
-                  placeholderTextColor="#9ca3af"
+                  placeholder="PASSWORD"
+                  placeholderTextColor={mutedColor}
                   secureTextEntry={!showPassword}
-                  className="flex-1 text-gray-900 dark:text-white text-base"
+                  style={inputTextStyle}
                 />
                 <TouchableOpacity onPress={() => setShowPassword(v => !v)} hitSlop={8}>
-                  <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color="#9ca3af" />
+                  <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={18} color={mutedColor} />
                 </TouchableOpacity>
               </View>
               {mode === 'signup' && (
-                <View className="flex-row items-center border-b border-gray-100 dark:border-gray-800" style={{ paddingVertical: 16 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: inputBg, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14 }}>
                   <TextInput
                     value={confirm}
                     onChangeText={setConfirm}
-                    placeholder="Confirm Password"
-                    placeholderTextColor="#9ca3af"
+                    placeholder="CONFIRM PASSWORD"
+                    placeholderTextColor={mutedColor}
                     secureTextEntry={!showConfirm}
-                    className="flex-1 text-gray-900 dark:text-white text-base"
+                    style={inputTextStyle}
                   />
                   <TouchableOpacity onPress={() => setShowConfirm(v => !v)} hitSlop={8}>
-                    <Ionicons name={showConfirm ? 'eye-off-outline' : 'eye-outline'} size={20} color="#9ca3af" />
+                    <Ionicons name={showConfirm ? 'eye-off-outline' : 'eye-outline'} size={18} color={mutedColor} />
                   </TouchableOpacity>
                 </View>
               )}
@@ -193,23 +198,26 @@ export default function LoginScreen() {
 
             {/* Feedback */}
             {error && (
-              <Text className="text-red-500 text-sm mb-5">{error}</Text>
+              <Text style={{ fontSize: 11, fontWeight: '600', color: '#ef4444', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 20 }}>
+                {error}
+              </Text>
             )}
             {info && (
-              <Text className="text-gray-500 text-sm mb-5">{info}</Text>
+              <Text style={{ ...mutedStyle, marginBottom: 20 }}>
+                {info}
+              </Text>
             )}
 
             {/* Submit */}
             <TouchableOpacity
               onPress={handleSubmit}
               disabled={loading}
-              className="bg-gray-900 rounded-xl items-center"
-              style={{ paddingVertical: 15 }}
+              style={{ backgroundColor: labelColor, borderRadius: 12, alignItems: 'center', paddingVertical: 15, opacity: loading ? 0.7 : 1 }}
             >
               {loading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text className="text-white font-medium text-base">
+                <Text style={{ fontSize: 11, fontWeight: '600', color: isDark ? '#111827' : '#ffffff', textTransform: 'uppercase', letterSpacing: 1.5 }}>
                   {mode === 'signin' ? 'Sign In' : 'Create Account'}
                 </Text>
               )}
