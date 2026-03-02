@@ -9,7 +9,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useColorScheme } from 'nativewind';
 import { useTheme, hexToRgba } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
 import { useToday } from '../../hooks/useToday';
+import { useNavigation } from '@react-navigation/native';
 import { fetchHabits, fetchEntriesForDate, toggleHabitEntry, createHabit } from '../../controllers/HabitController';
 import { fetchTasksForDate, createTask, toggleTask } from '../../controllers/TaskController';
 import { fetchStatDefinitions, logStatEntry, fetchAllStatEntriesForDate, createStatDefinition } from '../../controllers/StatController';
@@ -709,6 +711,8 @@ export default function HomeScreen() {
   const { width: screenWidth } = useWindowDimensions();
   const { colorScheme } = useColorScheme();
   const { accentColor } = useTheme();
+  const { session } = useAuth();
+  const navigation = useNavigation<any>();
   const isDark = colorScheme === 'dark';
   const mutedColor = '#9ca3af';
 
@@ -828,6 +832,20 @@ export default function HomeScreen() {
   function handleStatCreated(stat: StatDefinition) {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setStats(prev => [...prev, stat]);
+  }
+
+  if (!session) {
+    return (
+      <SafeAreaView className="flex-1 bg-white" style={isDark ? { backgroundColor: '#000000' } : undefined}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingBottom: 88 }}>
+          <TouchableOpacity onPress={() => navigation.navigate('Settings')} activeOpacity={0.6}>
+            <Text style={{ fontSize: 11, fontWeight: '600', letterSpacing: 3, textTransform: 'uppercase', color: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.25)' }}>
+              Sign In
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
   }
 
   if (loading) {

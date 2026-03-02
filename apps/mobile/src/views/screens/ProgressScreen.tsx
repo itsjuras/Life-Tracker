@@ -5,7 +5,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { VictoryArea, VictoryChart, VictoryAxis } from 'victory-native';
 import { useColorScheme } from 'nativewind';
 import { useTheme, hexToRgba } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
 import { useToday } from '../../hooks/useToday';
+import { useNavigation } from '@react-navigation/native';
 import { fetchHabits, fetchEntriesForDateRange } from '../../controllers/HabitController';
 import { fetchStatDefinitions, fetchStatEntries } from '../../controllers/StatController';
 import { Habit, HabitEntry } from '../../models/Habit';
@@ -381,6 +383,8 @@ export default function ProgressScreen() {
   const today = useToday();
   const { width: screenWidth } = useWindowDimensions();
   const { colorScheme } = useColorScheme();
+  const { session } = useAuth();
+  const navigation = useNavigation<any>();
   const isDark = colorScheme === 'dark';
   const iconColor = isDark ? '#ffffff' : '#111111';
   const mutedColor = '#9ca3af';
@@ -464,6 +468,20 @@ export default function ProgressScreen() {
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
+
+  if (!session) {
+    return (
+      <SafeAreaView className="flex-1 bg-white" style={isDark ? { backgroundColor: '#000000' } : undefined}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingBottom: 88 }}>
+          <TouchableOpacity onPress={() => navigation.navigate('Settings')} activeOpacity={0.6}>
+            <Text style={{ fontSize: 11, fontWeight: '600', letterSpacing: 3, textTransform: 'uppercase', color: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.25)' }}>
+              Sign In
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (loading) {
     return (
