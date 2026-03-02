@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, useWindowDimensions, PanResponder, Animated } from 'react-native';
+import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, useWindowDimensions, PanResponder, Modal, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { VictoryArea, VictoryChart, VictoryAxis } from 'victory-native';
@@ -10,8 +10,11 @@ import { useToday } from '../../hooks/useToday';
 import { useNavigation } from '@react-navigation/native';
 import { fetchHabits, fetchEntriesForDateRange } from '../../controllers/HabitController';
 import { fetchStatDefinitions, fetchStatEntries } from '../../controllers/StatController';
+import { fetchTasksForDate } from '../../controllers/TaskController';
+import { fetchReflection } from '../../controllers/ReflectionController';
 import { Habit, HabitEntry } from '../../models/Habit';
 import { StatDefinition, StatEntry } from '../../models/Stat';
+import { Task } from '../../models/Task';
 
 // ── Constants ─────────────────────────────────────────────────────────────
 const CELL_GAP = 3;
@@ -89,108 +92,40 @@ function SectionHeader({ label }: { label: string }) {
   );
 }
 
-// ── Animated calendar cell ────────────────────────────────────────────────
+// ── Calendar cell ─────────────────────────────────────────────────────────
 function CalendarCell({
-  date, cellSize, ratio, isDark,
+  date, cellSize, ratio, isDark, onPress,
 }: {
   date: string | null; cellSize: number;
   ratio: number | null; isDark: boolean;
+  onPress?: (date: string) => void;
 }) {
   const { accentColor } = useTheme();
-  const swipeAnim = useRef(new Animated.Value(0)).current;
-  const textOpacity = useRef(new Animated.Value(0)).current;
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const handlePress = () => {
-    // Glare sweep
-    swipeAnim.setValue(0);
-    Animated.timing(swipeAnim, { toValue: 1, duration: 600, useNativeDriver: true }).start();
-
-    // Percentage: fade in → hold 3 s → fade out
-    if (timerRef.current) clearTimeout(timerRef.current);
-    Animated.timing(textOpacity, { toValue: 1, duration: 250, useNativeDriver: true }).start();
-    timerRef.current = setTimeout(() => {
-      Animated.timing(textOpacity, { toValue: 0, duration: 400, useNativeDriver: true }).start();
-    }, 3000);
-  };
-
-  // Padding cells: invisible placeholder, no interaction
   if (!date) {
-    return (
-      <View style={{ width: cellSize, height: cellSize, borderRadius: 4 }} />
-    );
+    return <View style={{ width: cellSize, height: cellSize, borderRadius: 4 }} />;
   }
 
-  const glareX = swipeAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [-cellSize * 0.8, cellSize * 1.4],
-  });
-
-  const percentText = ratio !== null ? `${Math.round(ratio * 100)}%` : null;
-
   return (
-    <TouchableOpacity onPress={handlePress} activeOpacity={1}>
-      <View
-        style={{
-          width: cellSize,
-          height: cellSize,
-          backgroundColor: habitColor(ratio, isDark, accentColor),
-          borderRadius: 4,
-          overflow: 'hidden',
-        }}
-      >
-        {/* Diagonal glare sweep */}
-        <Animated.View
-          pointerEvents="none"
-          style={{
-            position: 'absolute',
-            top: -cellSize,
-            width: cellSize * 0.45,
-            height: cellSize * 3,
-            backgroundColor: 'rgba(255,255,255,0.5)',
-            transform: [{ translateX: glareX }, { rotate: '-25deg' }],
-          }}
-        />
-
-        {/* Percentage label */}
-        {percentText !== null && (
-          <Animated.View
-            pointerEvents="none"
-            style={{
-              position: 'absolute',
-              top: 0, left: 0, right: 0, bottom: 0,
-              alignItems: 'center',
-              justifyContent: 'center',
-              opacity: textOpacity,
-            }}
-          >
-            <Text style={{
-              fontSize: Math.max(7, Math.floor(cellSize * 0.22)),
-              color: '#fff',
-              fontWeight: '700',
-            }}>
-              {percentText}
-            </Text>
-          </Animated.View>
-        )}
-      </View>
+    <TouchableOpacity onPress={() => onPress?.(date)} activeOpacity={0.7}>
+      <View style={{ width: cellSize, height: cellSize, backgroundColor: habitColor(ratio, isDark, accentColor), borderRadius: 4 }} />
     </TouchableOpacity>
   );
 }
 
 // ── Month calendar grid (no title — handled by nav header) ────────────────
 function MonthCalendar({
-  year, month, today, ratioByDate, isDark, mutedColor, cellSize,
+  year, month, today, ratioByDate, isDark, mutedColor, cellSize, onDayPress,
 }: {
   year: number; month: number; today: string;
   ratioByDate: Record<string, number>; isDark: boolean; mutedColor: string;
-  cellSize: number;
+  cellSize: number; onDayPress: (date: string) => void;
 }) {
   const rows = buildMonthGrid(year, month);
 
   return (
     <View>
-      {/* Day-of-week headers — same width as cells for perfect alignment */}
+      {/* Day-of-week headers */}
       <View style={{ flexDirection: 'row', gap: CELL_GAP, marginBottom: CELL_GAP }}>
         {DAY_HEADERS.map(d => (
           <View key={d} style={{ width: cellSize, alignItems: 'center', paddingVertical: 3 }}>
@@ -213,6 +148,7 @@ function MonthCalendar({
                   cellSize={cellSize}
                   ratio={ratio}
                   isDark={isDark}
+                  onPress={isFuture ? undefined : onDayPress}
                 />
               );
             })}
@@ -396,6 +332,12 @@ export default function ProgressScreen() {
   const [stats, setStats] = useState<StatDefinition[]>([]);
   const [statEntriesMap, setStatEntriesMap] = useState<Record<string, StatEntry[]>>({});
 
+  // Day detail popup
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [dayTasks, setDayTasks] = useState<Task[]>([]);
+  const [dayReflection, setDayReflection] = useState<string | null>(null);
+  const [dayLoading, setDayLoading] = useState(false);
+
   // Floor to an integer so every cell is identically sized with no sub-pixel rounding
   const cellSize = Math.floor((screenWidth - CELL_GAP * 6 - CALENDAR_PADDING * 2) / 7);
   const calFrom = calendarRangeStart(today);
@@ -427,6 +369,23 @@ export default function ProgressScreen() {
   ).current;
 
   useEffect(() => { loadAll(); }, [today]);
+
+  async function handleDayPress(date: string) {
+    setSelectedDay(date);
+    setDayLoading(true);
+    setDayTasks([]);
+    setDayReflection(null);
+    try {
+      const [tasks, reflection] = await Promise.all([
+        fetchTasksForDate(date),
+        fetchReflection(date),
+      ]);
+      setDayTasks(tasks);
+      setDayReflection(reflection?.text ?? null);
+    } catch { /* silent */ } finally {
+      setDayLoading(false);
+    }
+  }
 
   async function loadAll() {
     setLoading(true);
@@ -537,6 +496,7 @@ export default function ProgressScreen() {
                 isDark={isDark}
                 mutedColor={mutedColor}
                 cellSize={cellSize}
+                onDayPress={handleDayPress}
               />
             </View>
           </View>
@@ -560,6 +520,73 @@ export default function ProgressScreen() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      {/* ── DAY DETAIL MODAL ── */}
+      {(() => {
+        if (!selectedDay) return null;
+        const d = new Date(selectedDay + 'T00:00:00');
+        const dateLabel = `${MONTH_NAMES[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+        const completedCount = habitEntries.filter(e => e.date === selectedDay && e.completed).length;
+        const labelColor = isDark ? '#f9fafb' : '#111827';
+        const labelStyle = { fontSize: 11, fontWeight: '600' as const, color: labelColor, textTransform: 'uppercase' as const, letterSpacing: 1.5, textAlign: 'center' as const };
+        const mutedStyle = { fontSize: 11, color: mutedColor, textTransform: 'uppercase' as const, letterSpacing: 1.5, textAlign: 'center' as const };
+
+        return (
+          <Modal visible transparent animationType="fade" onRequestClose={() => setSelectedDay(null)}>
+            <Pressable
+              style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center' }}
+              onPress={() => setSelectedDay(null)}
+            >
+              <Pressable onPress={() => {}} style={{ width: 300, backgroundColor: isDark ? '#111111' : '#ffffff', borderRadius: 24, padding: 28, gap: 18, alignItems: 'center' }}>
+
+                {/* Date */}
+                <Text style={labelStyle}>{dateLabel}</Text>
+
+                {dayLoading ? (
+                  <ActivityIndicator color={mutedColor} />
+                ) : (
+                  <>
+                    {/* Reflection */}
+                    {dayReflection ? (
+                      <Text style={{ ...labelStyle, fontWeight: '400' as const }}>
+                        "{dayReflection}"
+                      </Text>
+                    ) : (
+                      <Text style={mutedStyle}>No reflection.</Text>
+                    )}
+
+                    {/* Habit count */}
+                    {habits.length > 0 && (
+                      <Text style={mutedStyle}>
+                        {completedCount}/{habits.length} habits
+                      </Text>
+                    )}
+
+                    {/* Tasks */}
+                    {dayTasks.length > 0 && (
+                      <View style={{ gap: 8 }}>
+                        {dayTasks.map(task => (
+                          <Text
+                            key={task.id}
+                            style={task.completed ? mutedStyle : labelStyle}
+                          >
+                            {task.completed ? '✓ ' : '– '}{task.title}
+                          </Text>
+                        ))}
+                      </View>
+                    )}
+
+                    {dayTasks.length === 0 && habits.length === 0 && !dayReflection && (
+                      <Text style={mutedStyle}>Nothing logged.</Text>
+                    )}
+                  </>
+                )}
+              </Pressable>
+            </Pressable>
+          </Modal>
+        );
+      })()}
+
     </SafeAreaView>
   );
 }
