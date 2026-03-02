@@ -47,8 +47,17 @@ export default function TrackingManagerScreen({ onBack }: Props) {
   const today = useToday();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
-  const iconColor = isDark ? '#ffffff' : '#111111';
   const mutedColor = '#9ca3af';
+
+  const label = {
+    fontSize: 11, fontWeight: '600' as const,
+    color: isDark ? '#f9fafb' : '#111827',
+    textTransform: 'uppercase' as const, letterSpacing: 1.5,
+  };
+  const muted = {
+    fontSize: 11, color: mutedColor,
+    textTransform: 'uppercase' as const, letterSpacing: 1.5,
+  };
 
   // ── Habits ──────────────────────────────────────────
   const [habits, setHabits] = useState<Habit[]>([]);
@@ -192,22 +201,22 @@ export default function TrackingManagerScreen({ onBack }: Props) {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-white dark:bg-gray-950">
+    <SafeAreaView className="flex-1 bg-white" style={isDark ? { backgroundColor: '#000000' } : undefined}>
 
       {/* Header */}
       <TouchableOpacity
         onPress={onBack}
         className={`flex-row items-center px-5 py-4 ${divider}`}
       >
-        <Ionicons name="arrow-back" size={20} color={iconColor} />
-        <Text className="text-base text-gray-900 dark:text-white ml-2">Settings</Text>
+        <Ionicons name="arrow-back" size={16} color={mutedColor} />
+        <Text style={{ ...muted, marginLeft: 8 }}>Settings</Text>
       </TouchableOpacity>
 
       <ScrollView showsVerticalScrollIndicator={false}>
 
         {/* ── HABITS ── */}
         <SectionHeader label="Habits" />
-        <View className={`border-t ${divider.split(' ')[0]} ${divider.split(' ').slice(1).join(' ')}`}>
+        <View className={`border-t ${divider}`}>
 
           {habitsLoading ? (
             <View className="py-6 items-center">
@@ -215,20 +224,20 @@ export default function TrackingManagerScreen({ onBack }: Props) {
             </View>
           ) : habits.length === 0 && !addingHabit ? (
             <View className={`px-5 py-4 ${divider}`}>
-              <Text className="text-sm text-gray-400 dark:text-gray-500">No habits yet.</Text>
+              <Text style={muted}>No habits yet.</Text>
             </View>
           ) : habits.map(h => (
             <View key={h.id} className={`px-5 py-4 flex-row items-center justify-between ${divider}`}>
               <View className="flex-row items-center" style={{ gap: 10 }}>
                 <Ionicons
-                  name={ICON_MAP[h.iconKey] ?? 'ellipse-outline'}
-                  size={18}
-                  color={iconColor}
+                  name={ICON_MAP[h.iconKey as IconKey] ?? 'ellipse-outline'}
+                  size={16}
+                  color={mutedColor}
                 />
-                <Text className="text-base text-gray-900 dark:text-white">{h.name}</Text>
+                <Text style={label}>{h.name}</Text>
               </View>
               <TouchableOpacity onPress={() => handleDeleteHabit(h.id)} hitSlop={8}>
-                <Ionicons name="trash-outline" size={18} color={mutedColor} />
+                <Ionicons name="trash-outline" size={16} color={mutedColor} />
               </TouchableOpacity>
             </View>
           ))}
@@ -239,12 +248,18 @@ export default function TrackingManagerScreen({ onBack }: Props) {
               <TextInput
                 value={habitName}
                 onChangeText={setHabitName}
-                placeholder="Habit name"
+                placeholder="HABIT NAME"
                 placeholderTextColor={mutedColor}
                 autoFocus
                 returnKeyType="done"
-                className={`text-base text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-800`}
-                style={{ paddingBottom: 8 }}
+                style={{
+                  fontSize: 11, fontWeight: '600',
+                  color: isDark ? '#f9fafb' : '#111827',
+                  textTransform: 'uppercase', letterSpacing: 1.5,
+                  paddingBottom: 8,
+                  borderBottomWidth: 1,
+                  borderBottomColor: isDark ? '#1f2937' : '#f3f4f6',
+                }}
               />
               {/* Icon picker */}
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -264,7 +279,7 @@ export default function TrackingManagerScreen({ onBack }: Props) {
                       <Ionicons
                         name={ICON_MAP[key] ?? 'ellipse-outline'}
                         size={18}
-                        color={habitIcon === key ? iconColor : mutedColor}
+                        color={habitIcon === key ? (isDark ? '#f9fafb' : '#111827') : mutedColor}
                       />
                     </TouchableOpacity>
                   ))}
@@ -272,12 +287,12 @@ export default function TrackingManagerScreen({ onBack }: Props) {
               </ScrollView>
               <View className="flex-row justify-end" style={{ gap: 20 }}>
                 <TouchableOpacity onPress={() => { setAddingHabit(false); setHabitName(''); setHabitIcon('star'); }}>
-                  <Text className="text-gray-400 dark:text-gray-500 text-sm">Cancel</Text>
+                  <Text style={muted}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={handleAddHabit} disabled={savingHabit}>
                   {savingHabit
                     ? <ActivityIndicator size="small" color={mutedColor} />
-                    : <Text className="text-gray-900 dark:text-white font-medium text-sm">Save</Text>
+                    : <Text style={label}>Save</Text>
                   }
                 </TouchableOpacity>
               </View>
@@ -288,15 +303,15 @@ export default function TrackingManagerScreen({ onBack }: Props) {
               style={{ gap: 8 }}
               onPress={() => setAddingHabit(true)}
             >
-              <Ionicons name="add" size={18} color={mutedColor} />
-              <Text className="text-sm text-gray-400 dark:text-gray-500">Add habit</Text>
+              <Ionicons name="add" size={16} color={mutedColor} />
+              <Text style={muted}>Add habit</Text>
             </TouchableOpacity>
           )}
         </View>
 
         {/* ── STATS ── */}
         <SectionHeader label="Stats" />
-        <View className={`border-t ${divider.split(' ')[0]} ${divider.split(' ').slice(1).join(' ')}`}>
+        <View className={`border-t ${divider}`}>
 
           {statsLoading ? (
             <View className="py-6 items-center">
@@ -304,14 +319,14 @@ export default function TrackingManagerScreen({ onBack }: Props) {
             </View>
           ) : stats.length === 0 && !addingStat ? (
             <View className={`px-5 py-4 ${divider}`}>
-              <Text className="text-sm text-gray-400 dark:text-gray-500">No stats yet.</Text>
+              <Text style={muted}>No stats yet.</Text>
             </View>
           ) : stats.map(s => (
             <View key={s.id} className={`px-5 py-4 flex-row items-center justify-between ${divider}`}>
               <View>
-                <Text className="text-base text-gray-900 dark:text-white">{s.label}</Text>
+                <Text style={label}>{s.label}</Text>
                 {s.unit ? (
-                  <Text className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{s.unit}</Text>
+                  <Text style={{ ...muted, fontSize: 9, marginTop: 2 }}>{s.unit}</Text>
                 ) : null}
               </View>
               <View className="flex-row items-center" style={{ gap: 16 }}>
@@ -319,11 +334,11 @@ export default function TrackingManagerScreen({ onBack }: Props) {
                   <Ionicons
                     name={s.enabled ? 'toggle' : 'toggle-outline'}
                     size={26}
-                    color={s.enabled ? iconColor : mutedColor}
+                    color={s.enabled ? (isDark ? '#f9fafb' : '#111827') : mutedColor}
                   />
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => handleDeleteStat(s.id)} hitSlop={8}>
-                  <Ionicons name="trash-outline" size={18} color={mutedColor} />
+                  <Ionicons name="trash-outline" size={16} color={mutedColor} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -335,28 +350,40 @@ export default function TrackingManagerScreen({ onBack }: Props) {
               <TextInput
                 value={statLabel}
                 onChangeText={setStatLabel}
-                placeholder="Label (e.g. Weight)"
+                placeholder="LABEL (E.G. WEIGHT)"
                 placeholderTextColor={mutedColor}
                 autoFocus
-                className="text-base text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-800"
-                style={{ paddingBottom: 8 }}
+                style={{
+                  fontSize: 11, fontWeight: '600',
+                  color: isDark ? '#f9fafb' : '#111827',
+                  textTransform: 'uppercase', letterSpacing: 1.5,
+                  paddingBottom: 8,
+                  borderBottomWidth: 1,
+                  borderBottomColor: isDark ? '#1f2937' : '#f3f4f6',
+                }}
               />
               <TextInput
                 value={statUnit}
                 onChangeText={setStatUnit}
-                placeholder="Unit (e.g. kg) — optional"
+                placeholder="UNIT (E.G. KG) — OPTIONAL"
                 placeholderTextColor={mutedColor}
-                className="text-base text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-800"
-                style={{ paddingBottom: 8 }}
+                style={{
+                  fontSize: 11, fontWeight: '600',
+                  color: isDark ? '#f9fafb' : '#111827',
+                  textTransform: 'uppercase', letterSpacing: 1.5,
+                  paddingBottom: 8,
+                  borderBottomWidth: 1,
+                  borderBottomColor: isDark ? '#1f2937' : '#f3f4f6',
+                }}
               />
               <View className="flex-row justify-end" style={{ gap: 20 }}>
                 <TouchableOpacity onPress={() => { setAddingStat(false); setStatLabel(''); setStatUnit(''); }}>
-                  <Text className="text-gray-400 dark:text-gray-500 text-sm">Cancel</Text>
+                  <Text style={muted}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={handleAddStat} disabled={savingStat}>
                   {savingStat
                     ? <ActivityIndicator size="small" color={mutedColor} />
-                    : <Text className="text-gray-900 dark:text-white font-medium text-sm">Save</Text>
+                    : <Text style={label}>Save</Text>
                   }
                 </TouchableOpacity>
               </View>
@@ -367,15 +394,15 @@ export default function TrackingManagerScreen({ onBack }: Props) {
               style={{ gap: 8 }}
               onPress={() => setAddingStat(true)}
             >
-              <Ionicons name="add" size={18} color={mutedColor} />
-              <Text className="text-sm text-gray-400 dark:text-gray-500">Add stat</Text>
+              <Ionicons name="add" size={16} color={mutedColor} />
+              <Text style={muted}>Add stat</Text>
             </TouchableOpacity>
           )}
         </View>
 
         {/* ── TASKS (Today) ── */}
         <SectionHeader label="Today's Tasks" />
-        <View className={`border-t ${divider.split(' ')[0]} ${divider.split(' ').slice(1).join(' ')}`}>
+        <View className={`border-t ${divider}`}>
 
           {tasksLoading ? (
             <View className="py-6 items-center">
@@ -383,15 +410,15 @@ export default function TrackingManagerScreen({ onBack }: Props) {
             </View>
           ) : tasks.length === 0 && !addingTask ? (
             <View className={`px-5 py-4 ${divider}`}>
-              <Text className="text-sm text-gray-400 dark:text-gray-500">No tasks for today.</Text>
+              <Text style={muted}>No tasks for today.</Text>
             </View>
           ) : tasks.map(t => (
             <View key={t.id} className={`px-5 py-4 flex-row items-center justify-between ${divider}`}>
-              <Text className={`text-base flex-1 mr-4 ${t.completed ? 'text-gray-400 dark:text-gray-600 line-through' : 'text-gray-900 dark:text-white'}`}>
+              <Text style={{ ...label, flex: 1, marginRight: 16, color: t.completed ? mutedColor : (isDark ? '#f9fafb' : '#111827'), textDecorationLine: t.completed ? 'line-through' : 'none' }}>
                 {t.title}
               </Text>
               <TouchableOpacity onPress={() => handleDeleteTask(t.id)} hitSlop={8}>
-                <Ionicons name="trash-outline" size={18} color={mutedColor} />
+                <Ionicons name="trash-outline" size={16} color={mutedColor} />
               </TouchableOpacity>
             </View>
           ))}
@@ -402,22 +429,28 @@ export default function TrackingManagerScreen({ onBack }: Props) {
               <TextInput
                 value={taskTitle}
                 onChangeText={setTaskTitle}
-                placeholder="Task title"
+                placeholder="TASK TITLE"
                 placeholderTextColor={mutedColor}
                 autoFocus
                 returnKeyType="done"
                 onSubmitEditing={handleAddTask}
-                className="text-base text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-800"
-                style={{ paddingBottom: 8 }}
+                style={{
+                  fontSize: 11, fontWeight: '600',
+                  color: isDark ? '#f9fafb' : '#111827',
+                  textTransform: 'uppercase', letterSpacing: 1.5,
+                  paddingBottom: 8,
+                  borderBottomWidth: 1,
+                  borderBottomColor: isDark ? '#1f2937' : '#f3f4f6',
+                }}
               />
               <View className="flex-row justify-end" style={{ gap: 20 }}>
                 <TouchableOpacity onPress={() => { setAddingTask(false); setTaskTitle(''); }}>
-                  <Text className="text-gray-400 dark:text-gray-500 text-sm">Cancel</Text>
+                  <Text style={muted}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={handleAddTask} disabled={savingTask}>
                   {savingTask
                     ? <ActivityIndicator size="small" color={mutedColor} />
-                    : <Text className="text-gray-900 dark:text-white font-medium text-sm">Save</Text>
+                    : <Text style={label}>Save</Text>
                   }
                 </TouchableOpacity>
               </View>
@@ -428,8 +461,8 @@ export default function TrackingManagerScreen({ onBack }: Props) {
               style={{ gap: 8 }}
               onPress={() => setAddingTask(true)}
             >
-              <Ionicons name="add" size={18} color={mutedColor} />
-              <Text className="text-sm text-gray-400 dark:text-gray-500">Add task</Text>
+              <Ionicons name="add" size={16} color={mutedColor} />
+              <Text style={muted}>Add task</Text>
             </TouchableOpacity>
           )}
         </View>
