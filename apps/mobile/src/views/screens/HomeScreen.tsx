@@ -877,7 +877,7 @@ export default function HomeScreen() {
   const allHabitsTasksDone = pendingHabits.length === 0 && pendingTasks.length === 0;
   const hasItemsToComplete = habits.length > 0 || tasks.length > 0;
   const showReflectionCard = !editMode && !hasReflection && !reflectionDismissed && (reflectionOpen || (allHabitsTasksDone && hasItemsToComplete));
-  const showDone = !editMode && pendingHabits.length === 0 && pendingTasks.length === 0 && pendingStats.length === 0 && hasReflection;
+  const showDone = !editMode && hasReflection;
   const showEndDay = !editMode && !hasReflection && !showReflectionCard;
 
   return (
@@ -896,14 +896,27 @@ export default function HomeScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         {/* Header */}
-        <View className="flex-row items-center justify-end px-5 py-3">
-          <TouchableOpacity onPress={() => setEditMode(e => !e)} hitSlop={8}>
-            <Ionicons
-              name={editMode ? 'create' : 'create-outline'}
-              size={18}
-              color={editMode ? accentColor : mutedColor}
-            />
-          </TouchableOpacity>
+        <View className="flex-row items-center justify-between px-5 py-3">
+          {showDone ? (
+            <TouchableOpacity
+              onPress={() => { setHasReflection(false); setReflectionText(''); setReflectionDismissed(false); }}
+              hitSlop={12}
+              activeOpacity={0.5}
+            >
+              <Ionicons name="chevron-back" size={22} color={isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.25)'} />
+            </TouchableOpacity>
+          ) : (
+            <View />
+          )}
+          {!showDone && (
+            <TouchableOpacity onPress={() => setEditMode(e => !e)} hitSlop={8}>
+              <Ionicons
+                name={editMode ? 'create' : 'create-outline'}
+                size={18}
+                color={editMode ? accentColor : mutedColor}
+              />
+            </TouchableOpacity>
+          )}
         </View>
 
         <ScrollView
@@ -914,7 +927,7 @@ export default function HomeScreen() {
         >
           <>
               {/* ── HABITS ── */}
-              {(pendingHabits.length > 0 || editMode) && (
+              {!showDone && (pendingHabits.length > 0 || editMode) && (
                 <View>
                   <SectionHeader label="Habits" />
                   <View style={{
@@ -973,7 +986,7 @@ export default function HomeScreen() {
               )}
 
               {/* ── TASKS ── */}
-              {(pendingTasks.length > 0 || editMode) && (
+              {!showDone && (pendingTasks.length > 0 || editMode) && (
                 <View>
                   <SectionHeader label="Tasks" />
                   <View style={{ paddingHorizontal: 16, gap: 10 }}>
@@ -1005,7 +1018,7 @@ export default function HomeScreen() {
               )}
 
               {/* ── STATS ── */}
-              {(pendingStats.length > 0 || editMode) && (
+              {!showDone && (pendingStats.length > 0 || editMode) && (
                 <View>
                   <SectionHeader label="Stats" />
                   <View style={{ paddingHorizontal: 16, gap: 10 }}>
