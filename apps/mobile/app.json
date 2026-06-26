@@ -4,13 +4,39 @@
     "slug": "life-tracker",
     "version": "1.0.0",
     "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0f0f23"
+    },
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "bundleIdentifier": "com.itsjuras.lifetracker",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Life Tracker uses the camera to let you set a profile photo.",
+        "NSPhotoLibraryUsageDescription": "Life Tracker accesses your photo library to let you set a profile photo.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
+      "package": "com.itsjuras.lifetracker",
+      "versionCode": 1,
       "adaptiveIcon": {
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0f0f23"
       }
-    }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "21b94e4e-2ff6-4ead-9baa-ec77363491c4"
+      }
+    },
+    "owner": "itsjurasss"
   }
 }
