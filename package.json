@@ -1,9 +1,23 @@
 {
   "name": "life-tracker",
   "private": true,
-  "workspaces": ["apps/*", "services/*", "packages/*"],
+  "workspaces": [
+    "apps/*",
+    "services/*",
+    "packages/*"
+  ],
   "scripts": {
     "api": "npm run dev --workspace=services/api",
     "mobile": "npm run start --workspace=apps/mobile"
+  },
+  "dependencies": {
+    "react-native-reanimated": "~4.1.1",
+    "react-native-worklets": "0.5.1"
+  },
+  "overrides": {
+    "react": "19.1.0",
+    "react-native": "0.81.5",
+    "react-native-reanimated": "~4.1.1",
+    "react-native-worklets": "0.5.1"
   }
 }
