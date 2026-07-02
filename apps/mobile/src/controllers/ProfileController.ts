@@ -24,9 +24,11 @@ export async function fetchProfile(userId: string): Promise<Profile | null> {
 }
 
 export async function updateUsername(userId: string, username: string): Promise<void> {
+  // Stored lowercase to match signUp — signIn resolves usernames lowercase,
+  // so a mixed-case username would break username login.
   const { error } = await supabase
     .from('profiles')
-    .update({ username })
+    .update({ username: username.trim().toLowerCase() })
     .eq('id', userId);
   if (error) throw error;
 }
