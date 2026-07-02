@@ -16,7 +16,7 @@ import * as ImagePicker from 'expo-image-picker';
 import ColorPicker from 'react-native-wheel-color-picker';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import { signOut, changePassword } from '../../controllers/AuthController';
+import { signOut, changePassword, deleteAccount } from '../../controllers/AuthController';
 import { updateUsername, uploadAvatar, updateAccentColor } from '../../controllers/ProfileController';
 import Avatar from '../components/Avatar';
 
@@ -53,6 +53,8 @@ export default function SettingsScreen({ onEditTracking }: Props) {
 
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const [pickedColor, setPickedColor] = useState(accentColor);
+
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   useEffect(() => {
     if (profile?.username) setUsernameInput(profile.username);
@@ -133,6 +135,28 @@ export default function SettingsScreen({ onEditTracking }: Props) {
     setChangingPassword(false);
     setNewPassword('');
     setConfirmPassword('');
+  }
+
+  function handleDeleteAccount() {
+    Alert.alert(
+      'Delete account?',
+      'This will permanently delete your account and all of your data. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: confirmDeleteAccount },
+      ],
+    );
+  }
+
+  async function confirmDeleteAccount() {
+    setDeletingAccount(true);
+    try {
+      await deleteAccount();
+      // Local session is cleared — AuthContext switches the app to the login screen.
+    } catch (err: any) {
+      Alert.alert('Error', err.message ?? 'Failed to delete account.');
+      setDeletingAccount(false);
+    }
   }
 
   async function handleAccentSave() {
@@ -320,11 +344,27 @@ export default function SettingsScreen({ onEditTracking }: Props) {
         <TouchableOpacity
           onPress={() => signOut()}
           activeOpacity={0.6}
-          style={{ alignSelf: 'center', marginTop: 28, marginBottom: 40 }}
+          style={{ alignSelf: 'center', marginTop: 28, marginBottom: 24 }}
         >
           <Text style={{ fontSize: 11, fontWeight: '600', letterSpacing: 3, textTransform: 'uppercase', color: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.25)' }}>
             Sign Out
           </Text>
+        </TouchableOpacity>
+
+        {/* Delete account */}
+        <TouchableOpacity
+          onPress={handleDeleteAccount}
+          disabled={deletingAccount}
+          activeOpacity={0.6}
+          style={{ alignSelf: 'center', marginBottom: 40 }}
+        >
+          {deletingAccount ? (
+            <ActivityIndicator size="small" color="#ef4444" />
+          ) : (
+            <Text style={{ fontSize: 11, fontWeight: '600', letterSpacing: 3, textTransform: 'uppercase', color: 'rgba(239,68,68,0.6)' }}>
+              Delete Account
+            </Text>
+          )}
         </TouchableOpacity>
 
       </ScrollView>
