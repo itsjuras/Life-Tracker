@@ -8,7 +8,8 @@
   ],
   "scripts": {
     "api": "npm run dev --workspace=services/api",
-    "mobile": "npm run start --workspace=apps/mobile"
+    "mobile": "npm run start --workspace=apps/mobile",
+    "build:ios": "npm run build:ios --workspace=apps/mobile"
   },
   "dependencies": {
     "react-native-reanimated": "~4.1.1",
