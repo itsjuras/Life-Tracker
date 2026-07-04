@@ -212,7 +212,8 @@ export default function TrackingManagerScreen({ onBack }: Props) {
         <Text style={{ ...muted, marginLeft: 8 }}>Settings</Text>
       </TouchableOpacity>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
+      {/* paddingBottom keeps the last rows scrollable clear of the floating tab bar */}
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 112 }}>
 
         {/* ── HABITS ── */}
         <SectionHeader label="Habits" />
@@ -467,7 +468,6 @@ export default function TrackingManagerScreen({ onBack }: Props) {
           )}
         </View>
 
-        <View style={{ height: 40 }} />
       </ScrollView>
     </SafeAreaView>
   );

@@ -99,7 +99,8 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <View style={{ flex: 1, paddingHorizontal: 32, paddingTop: 64, paddingBottom: 40 }}>
+          {/* paddingBottom keeps the submit button clear of the floating tab bar */}
+          <View style={{ flex: 1, paddingHorizontal: 32, paddingTop: 64, paddingBottom: 112 }}>
 
             {/* Header */}
             <View style={{ marginBottom: 48 }}>

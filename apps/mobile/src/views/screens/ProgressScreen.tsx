@@ -452,7 +452,8 @@ export default function ProgressScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-white" style={isDark ? { backgroundColor: '#000000' } : undefined}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      {/* paddingBottom keeps the last chart scrollable clear of the floating tab bar */}
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 112 }}>
 
         {/* ── HABIT CALENDAR ── */}
         <SectionHeader label="Habits" />
@@ -518,7 +519,6 @@ export default function ProgressScreen() {
           </>
         )}
 
-        <View style={{ height: 40 }} />
       </ScrollView>
 
       {/* ── DAY DETAIL MODAL ── */}
