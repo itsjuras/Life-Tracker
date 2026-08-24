@@ -16,8 +16,8 @@
       "bundleIdentifier": "com.itsjuras.lifetracker",
       "buildNumber": "1",
       "infoPlist": {
-        "NSCameraUsageDescription": "Life Tracker uses the camera to let you set a profile photo.",
-        "NSPhotoLibraryUsageDescription": "Life Tracker accesses your photo library to let you set a profile photo.",
+        "NSCameraUsageDescription": "SimpliLife uses the camera to let you set a profile photo.",
+        "NSPhotoLibraryUsageDescription": "SimpliLife accesses your photo library to let you set a profile photo.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
